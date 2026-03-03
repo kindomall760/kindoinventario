@@ -162,7 +162,7 @@
                                 <span id="res-sku" class="font-mono text-[9px] text-muted">SKU: 00000</span>
                                 <h3 id="res-name" class="text-2xl font-bold tracking-tighter uppercase leading-tight">Producto</h3>
                                 <div class="flex gap-2">
-                                    <span id="res-category" class="text-[8px] border border-gray-200 px-2 py-0.5 font-bold uppercase text-muted">General</span>
+                                    <span id="res-category" class="text-[8px] border border-gray-100 px-2 py-0.5 font-bold uppercase text-muted">General</span>
                                 </div>
                             </div>
                             <div class="w-20 h-20 border border-gray-100 p-1 bg-gray-50">
@@ -220,7 +220,7 @@
                                     Escanear Ticket con IA
                                 </button>
                                 <div id="ai-loading" class="hidden pt-2 text-center">
-                                    <span class="text-[8px] font-bold animate-pulse uppercase">Procesando imagen...</span>
+                                    <span class="text-[8px] font-bold animate-pulse uppercase">Analizando ticket (Rotado)...</span>
                                 </div>
                             </div>
 
@@ -345,7 +345,7 @@
             hideAllPanels();
             document.getElementById('panel-form').classList.remove('hidden');
             document.getElementById('form-title').innerText = manual ? "Alta Manual" : "Registro Nuevo";
-            document.getElementById('form-sku-badge').innerText = code;
+            document.getElementById('form-sku-badge').innerText = code || "PENDIENTE";
             document.getElementById('btn-delete').classList.add('hidden');
         }
 
@@ -377,20 +377,39 @@
         async function analyzeWithAI(base64Image) {
             const loading = document.getElementById('ai-loading');
             loading.classList.remove('hidden');
-            const prompt = `Extrae de este ticket: nombre del producto, precio y descripción. Responde SOLO JSON: {"name": "...", "price": 0.0, "category": "..."}`;
+            
+            // Prompt mejorado para tickets rotados como el enviado por el usuario
+            const prompt = `Analiza esta etiqueta de inventario. Nota: El texto puede estar rotado 90 grados. 
+            Busca:
+            1. El nombre del producto (ej: "HYL VW286...").
+            2. El precio (ej: "800.00").
+            3. El SKU/Código (el número grande junto al código de barras, ej: "21857").
+            
+            Responde SOLO con este formato JSON: {"name": "...", "price": 0.0, "sku": "...", "category": "..."}`;
+            
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: "image/png", data: base64Image } }] }] })
                 });
                 const data = await response.json();
-                const result = JSON.parse(data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim());
+                const textResult = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                const result = JSON.parse(textResult);
+                
                 if(result.name) document.getElementById('new-name').value = result.name;
                 if(result.price) document.getElementById('new-price').value = result.price;
                 if(result.category) document.getElementById('new-category').value = result.category;
-                showToast("Datos Extraídos");
+                
+                // Si la IA encontró un SKU y no teníamos uno activo (o era manual genérico), lo actualizamos
+                if(result.sku && (!activeCode || activeCode.startsWith('MAN-'))) {
+                    activeCode = result.sku;
+                    document.getElementById('form-sku-badge').innerText = activeCode;
+                }
+                
+                showToast("Lectura Inteligente Exitosa");
             } catch (err) {
-                showToast("IA: No se pudo leer");
+                console.error(err);
+                showToast("IA: No se pudo interpretar el ticket");
             } finally {
                 loading.classList.add('hidden');
             }
@@ -402,10 +421,10 @@
             const stock = document.getElementById('new-stock').value;
             const category = document.getElementById('new-category').value;
 
-            if(!name || !price) return showToast("Datos incompletos");
+            if(!name || !price) return showToast("Faltan Nombre o Precio");
 
             const product = {
-                sku: activeCode,
+                sku: activeCode || "SKU-" + Date.now().toString().slice(-6),
                 name,
                 price: parseFloat(price),
                 stock: parseInt(stock) || 0,
@@ -414,7 +433,7 @@
                 id: Date.now()
             };
 
-            inventory = inventory.filter(p => p.sku !== activeCode);
+            inventory = inventory.filter(p => p.sku !== product.sku);
             inventory.unshift(product);
             localStorage.setItem('kindo_pro_db', JSON.stringify(inventory));
             
@@ -503,7 +522,7 @@
             t.classList.remove('opacity-0', 'translate-y-4');
             setTimeout(() => t.classList.add('opacity-0', 'translate-y-4'), 2500);
         }
-        function startManualRegistration() { showForm("MAN-" + Math.random().toString(36).substring(2,7).toUpperCase(), true); }
+        function startManualRegistration() { showForm(null, true); }
         window.onload = () => { lucide.createIcons(); };
     </script>
 </body>
