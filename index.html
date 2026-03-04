@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, Loader2, Search, FileText, Barcode, AlertCircle, RefreshCw, Copy, CheckCircle2 } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Camera, Loader2, Search, FileText, Barcode, AlertCircle, RefreshCw, Copy, CheckCircle2 } from 'lucide-react';
 
-const API_KEY = ""; // Environment provides this automatically
+const API_KEY = ""; // El entorno proporciona la clave automáticamente
 
 const App = () => {
   const [image, setImage] = useState(null);
@@ -12,7 +12,7 @@ const App = () => {
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Handle file upload and Base64 conversion
+  // Manejar subida de archivos y conversión a Base64
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -36,7 +36,7 @@ const App = () => {
     }
   };
 
-  // Analyze image with Gemini (Vision + Text)
+  // Analizar imagen con Gemini (Visión + Texto)
   const analyzeImage = async () => {
     if (!base64Image) {
       setError("Por favor, selecciona una imagen primero.");
@@ -73,7 +73,7 @@ const App = () => {
       ]
     };
 
-    // Exponential backoff retry logic
+    // Lógica de reintento con backoff exponencial
     const fetchWithRetry = async (retries = 5, delay = 1000) => {
       try {
         const response = await fetch(
@@ -107,7 +107,7 @@ const App = () => {
       setResult(textResult);
     } catch (err) {
       console.error(err);
-      setError(`Error: ${err.message}. Intenta con otra imagen o vuelve a intentarlo.`);
+      setError(`Error: ${err.message}. Intenta de nuevo.`);
     } finally {
       setLoading(false);
     }
@@ -124,7 +124,7 @@ const App = () => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch (err) {
-        console.error('Fallback copy failed', err);
+        console.error('Copy failed', err);
       }
       document.body.removeChild(textArea);
     }
@@ -133,19 +133,19 @@ const App = () => {
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
       <div className="max-w-3xl mx-auto">
-        {/* Header */}
+        {/* Encabezado */}
         <header className="mb-8 text-center">
           <div className="inline-flex items-center justify-center p-3 bg-indigo-600 rounded-2xl mb-4 shadow-lg shadow-indigo-200">
             <Search className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Smart Scan AI Pro</h1>
-          <p className="text-slate-500 mt-2">Visión artificial para extraer texto, códigos y datos clave</p>
+          <p className="text-slate-500 mt-2 text-sm md:text-base">Análisis completo de texto y códigos con IA</p>
         </header>
 
-        {/* Upload Section */}
+        {/* Sección de Carga */}
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 p-6 mb-8">
           <div 
-            className={`relative flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 transition-all duration-300 cursor-pointer overflow-hidden ${
+            className={`relative flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 transition-all duration-300 cursor-pointer ${
               image ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-300 hover:border-indigo-400 bg-slate-50 hover:bg-white'
             }`}
             onClick={() => fileInputRef.current.click()}
@@ -153,8 +153,8 @@ const App = () => {
             {image ? (
               <div className="relative w-full flex flex-col items-center">
                 <img src={image} alt="Preview" className="max-h-72 w-auto rounded-xl shadow-lg border border-white" />
-                <div className="absolute top-2 right-2 bg-white/90 backdrop-blur p-2 rounded-full shadow-sm">
-                  <RefreshCw className="w-4 h-4 text-slate-600" />
+                <div className="mt-4 flex items-center gap-2 text-indigo-600 font-medium text-sm">
+                  <RefreshCw className="w-4 h-4" /> Cambiar imagen
                 </div>
               </div>
             ) : (
@@ -163,7 +163,7 @@ const App = () => {
                   <Camera className="w-10 h-10 text-indigo-500" />
                 </div>
                 <p className="font-semibold text-slate-700 text-lg">Subir o Tomar Foto</p>
-                <p className="text-sm text-slate-400 mt-2 text-center max-w-[200px]">Selecciona una imagen con texto o códigos para analizar</p>
+                <p className="text-sm text-slate-400 mt-2 text-center max-w-[200px]">Selecciona una imagen con texto o códigos</p>
               </div>
             )}
             
@@ -181,10 +181,10 @@ const App = () => {
               <button 
                 onClick={analyzeImage}
                 disabled={loading}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-bold py-4 px-8 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-lg shadow-indigo-100 active:scale-95"
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-bold py-4 px-8 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-lg active:scale-95"
               >
                 {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Search className="w-6 h-6" />}
-                {loading ? 'Analizando documento...' : 'Procesar con IA'}
+                {loading ? 'Analizando...' : 'Analizar con IA'}
               </button>
               <button 
                 onClick={() => { setImage(null); setResult(null); setError(null); }}
@@ -196,21 +196,21 @@ const App = () => {
           )}
         </div>
 
-        {/* Error Display */}
+        {/* Mensajes de Error */}
         {error && (
-          <div className="bg-red-50 border border-red-100 text-red-600 p-5 rounded-2xl mb-8 flex items-start gap-4 animate-in fade-in zoom-in duration-300">
+          <div className="bg-red-50 border border-red-100 text-red-600 p-5 rounded-2xl mb-8 flex items-start gap-4">
             <AlertCircle className="w-6 h-6 flex-shrink-0" />
-            <p className="font-medium">{error}</p>
+            <p className="font-medium text-sm">{error}</p>
           </div>
         )}
 
-        {/* Results Section */}
+        {/* Resultados */}
         {result && (
-          <div className="bg-white rounded-3xl shadow-xl border border-indigo-50 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div className="bg-white rounded-3xl shadow-xl border border-indigo-50 overflow-hidden">
             <div className="bg-indigo-600 p-5 flex items-center justify-between text-white">
               <div className="flex items-center gap-3">
                 <FileText className="w-6 h-6" />
-                <h3 className="font-bold text-lg">Resultado de Inteligencia Artificial</h3>
+                <h3 className="font-bold text-lg">Resultado del Escaneo</h3>
               </div>
               <button 
                 onClick={copyToClipboard}
@@ -221,22 +221,18 @@ const App = () => {
               </button>
             </div>
             <div className="p-8">
-              <div className="prose prose-slate max-w-none prose-pre:bg-slate-50 prose-pre:text-indigo-600 whitespace-pre-wrap text-slate-700 leading-relaxed text-base">
+              <div className="whitespace-pre-wrap text-slate-700 leading-relaxed text-sm md:text-base">
                 {result}
               </div>
               
               <div className="mt-10 pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-2 text-slate-400">
                   <Barcode className="w-5 h-5" />
-                  <span className="text-sm font-medium">Procesado por Gemini 2.5 Flash</span>
+                  <span className="text-xs font-medium uppercase">Potenciado por Gemini AI</span>
                 </div>
                 <div className="flex gap-2">
-                   <span className="px-3 py-1 bg-green-50 text-green-600 text-xs font-bold rounded-full border border-green-100">
-                     OCR ACTIVO
-                   </span>
-                   <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full border border-blue-100">
-                     ANÁLISIS COMPLETADO
-                   </span>
+                   <span className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-bold rounded-full border border-green-100">OCR OK</span>
+                   <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full border border-blue-100">AI READY</span>
                 </div>
               </div>
             </div>
