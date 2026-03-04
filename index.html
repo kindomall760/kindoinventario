@@ -167,7 +167,7 @@ const App = () => {
           {image && (
             <div className="mt-6 flex flex-col sm:flex-row gap-4">
               <button 
-                onClick={analyzeImage}
+                onClick={(e) => { e.stopPropagation(); analyzeImage(); }}
                 disabled={loading}
                 className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-bold py-4 px-8 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-lg active:scale-95"
               >
