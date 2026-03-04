@@ -1,297 +1,290 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Loader2, Search, FileText, Barcode, AlertCircle, RefreshCw, Copy, CheckCircle2, History, Trash2, Save } from 'lucide-react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KINDO | Cloud Inventory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #fff; color: #000; }
+        .input-minimal { border-bottom: 1px solid #eee; padding: 12px 0; background: transparent; width: 100%; transition: 0.2s; }
+        .input-minimal:focus { border-color: #000; outline: none; }
+        .btn-primary { background: #000; color: #fff; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 16px; font-size: 10px; }
+        #reader video { object-fit: cover !important; }
+    </style>
+</head>
+<body class="antialiased overflow-hidden fixed w-full h-full">
 
-// Firebase Configuration
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'scanner-tickets-pro';
-
-const API_KEY = ""; // Kuatia rendague oipurúva
-
-const App = () => {
-  const [user, setUser] = useState(null);
-  const [image, setImage] = useState(null);
-  const [base64Image, setBase64Image] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState(null);
-  const [copied, setCopied] = useState(false);
-  const [history, setHistory] = useState([]);
-  const [saving, setSaving] = useState(false);
-  const fileInputRef = useRef(null);
-
-  // Authentication Setup
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (err) {
-        console.error("Auth Error:", err);
-      }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
-
-  // History Listener
-  useEffect(() => {
-    if (!user) return;
-
-    const historyRef = collection(db, 'artifacts', appId, 'users', user.uid, 'scans');
-    const unsubscribe = onSnapshot(historyRef, (snapshot) => {
-      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setHistory(docs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
-    }, (err) => {
-      console.error("Firestore Error:", err);
-    });
-
-    return () => unsubscribe();
-  }, [user]);
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 4 * 1024 * 1024) {
-        setError("Ta'ãnga tuichaiterei (4MB max).");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImage(reader.result);
-        setBase64Image(reader.result.split(',')[1]);
-        setResult(null);
-        setError(null);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const analyzeImage = async () => {
-    if (!base64Image) return;
-    setLoading(true);
-    setError(null);
-
-    const prompt = "Ehecha ko kuatia repy (ticket). Emboyke: Moõpa ojejogua, Arange, ha Hepykue. Ejapo peteĩ tysyi tembi'u térã mba'e ojejogua va'ekuégui. Embohovái Karaiñe'ẽme ha eipuru Markdown.";
-
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                { text: prompt },
-                { inlineData: { mimeType: "image/png", data: base64Image } }
-              ]
-            }]
-          })
-        }
-      );
-
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error("Ndaikatúi oñehesa'ỹijo ko kuatia");
-      setResult(text);
-    } catch (err) {
-      setError("Oiko peteĩ jejavy oñehesa'ỹijo jave. Ejapo jey.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const saveToHistory = async () => {
-    if (!result || !user || saving) return;
-    setSaving(true);
-    try {
-      await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'scans'), {
-        content: result,
-        createdAt: serverTimestamp(),
-      });
-      setResult(null);
-      setImage(null);
-    } catch (err) {
-      setError("Ndaikatúi oñeñongatu tembiasakuépe.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const deleteItem = async (id) => {
-    try {
-      await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'scans', id));
-    } catch (err) {
-      setError("Ndaikatúi oñembogue.");
-    }
-  };
-
-  const copyText = (txt) => {
-    const el = document.createElement('textarea');
-    el.value = txt;
-    document.body.appendChild(el);
-    el.select();
-    document.execCommand('copy');
-    document.body.removeChild(el);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans text-slate-900">
-      <div className="max-w-6xl mx-auto">
-        <header className="text-center mb-10">
-          <div className="bg-indigo-700 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl">
-            <FileText className="text-white w-8 h-8" />
-          </div>
-          <h1 className="text-4xl font-black text-slate-800 tracking-tight italic">TICKET SCANNER PRO</h1>
-          <p className="text-slate-500 font-medium tracking-wide uppercase text-xs">Hesatũ ha Ñongatu Tepykue IA ndive</p>
+    <div class="max-w-md mx-auto h-full flex flex-col bg-white shadow-2xl relative">
+        
+        <header class="px-6 py-6 border-b border-gray-100 flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-black tracking-tighter">KINDO®</h1>
+                <div class="flex items-center gap-2">
+                    <span id="sync-status" class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                    <p class="text-[8px] font-bold uppercase tracking-widest text-gray-400">Cloud Terminal</p>
+                </div>
+            </div>
+            <button onclick="toggleView()" class="px-4 py-2 bg-gray-50 rounded-full text-[9px] font-bold uppercase tracking-widest flex items-center gap-2">
+                <span id="nav-label">Archivo</span>
+                <i id="nav-icon" data-lucide="database" class="w-3 h-3"></i>
+            </button>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          {/* Main Scan Panel */}
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-200">
-              <div 
-                className={`border-4 border-dashed rounded-3xl p-10 text-center cursor-pointer transition-all duration-300 ${
-                  image ? 'border-indigo-400 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-400 bg-slate-50'
-                }`}
-                onClick={() => fileInputRef.current.click()}
-              >
-                {image ? (
-                  <div className="relative group">
-                    <img src={image} className="max-h-80 mx-auto rounded-xl shadow-md border-4 border-white" alt="Ticket Hechaukaha" />
-                    <div className="mt-4 flex items-center justify-center gap-2 text-indigo-600 font-bold text-sm uppercase">
-                      <RefreshCw className="w-4 h-4" /> Emoambue Ta'ãnga
+        <main class="flex-1 overflow-y-auto">
+            <!-- VISTA SCANNER -->
+            <section id="view-scanner" class="p-0">
+                <div class="h-64 bg-black relative flex items-center justify-center overflow-hidden">
+                    <div id="reader" class="w-full h-full"></div>
+                    <div id="cam-placeholder" class="absolute z-10 text-center">
+                        <button onclick="startScanner()" class="border-2 border-white text-white px-8 py-3 text-[10px] font-bold uppercase">Activar Lente</button>
                     </div>
-                  </div>
-                ) : (
-                  <div className="py-12">
-                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-slate-100">
-                      <Camera className="w-10 h-10 text-indigo-500" />
+                </div>
+
+                <div class="p-8 space-y-8">
+                    <div id="panel-default">
+                        <label class="text-[9px] font-bold uppercase tracking-widest text-gray-400">Búsqueda / Entrada</label>
+                        <div class="relative">
+                            <input id="manual-input" type="text" placeholder="SKU o Código..." class="input-minimal text-xl font-bold uppercase">
+                            <button onclick="processCode(document.getElementById('manual-input').value)" class="absolute right-0 bottom-3"><i data-lucide="arrow-right"></i></button>
+                        </div>
                     </div>
-                    <p className="font-black text-slate-700 text-xl tracking-tight uppercase">Emboguejy Kuatia</p>
-                    <p className="text-slate-400 text-sm mt-2 font-medium">Eikutu eiporavo hag̃ua térã eguenohẽ ta'ãnga</p>
-                  </div>
-                )}
-                <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*" />
-              </div>
 
-              {image && (
-                <div className="mt-6 flex gap-3">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); analyzeImage(); }} 
-                    disabled={loading}
-                    className="flex-[2] bg-indigo-700 hover:bg-indigo-800 text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 disabled:bg-slate-300 shadow-lg transition-transform active:scale-95"
-                  >
-                    {loading ? <Loader2 className="animate-spin w-6 h-6" /> : <Search className="w-6 h-6" />}
-                    {loading ? "OÑEHESA'ỸIJO HINA..." : "EHECHA TEPYKUE"}
-                  </button>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setImage(null); setResult(null); }}
-                    className="flex-1 bg-slate-100 text-slate-600 font-bold py-5 rounded-2xl hover:bg-slate-200 transition-colors"
-                  >
-                    EMBOGUE
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {result && (
-              <div className="bg-white rounded-[2.5rem] shadow-2xl border border-indigo-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
-                <div className="bg-indigo-700 p-6 flex justify-between items-center text-white">
-                  <h3 className="font-black tracking-tight text-lg">MBA'E OJEJOHU VA'EKUE</h3>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => copyText(result)} 
-                      className="p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
-                    >
-                      {copied ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" />}
-                    </button>
-                    <button 
-                      onClick={saveToHistory}
-                      disabled={saving}
-                      className="bg-emerald-500 hover:bg-emerald-600 px-6 py-2 rounded-xl text-xs font-black flex items-center gap-2 shadow-lg disabled:opacity-50"
-                    >
-                      <Save className="w-4 h-4" /> {saving ? 'OÑEÑONGATU HINA...' : 'EÑONGATU'}
-                    </button>
-                  </div>
-                </div>
-                <div className="p-8 text-slate-700 whitespace-pre-wrap text-sm leading-relaxed font-medium">
-                  {result}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* History Panel */}
-          <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 flex flex-col h-[calc(100vh-180px)]">
-            <div className="p-7 border-b flex justify-between items-center bg-slate-50/50">
-              <div className="flex items-center gap-3">
-                <div className="bg-indigo-100 p-2 rounded-lg">
-                  <History className="text-indigo-700 w-5 h-5" />
-                </div>
-                <h3 className="font-black text-slate-800 tracking-tight uppercase">Tembiasakue</h3>
-              </div>
-              <span className="text-xs font-black bg-indigo-700 text-white px-3 py-1 rounded-full">{history.length}</span>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-5">
-              {history.length === 0 ? (
-                <div className="text-center py-32 text-slate-300">
-                  <FileText className="w-16 h-16 mx-auto mb-4 opacity-10" />
-                  <p className="text-sm font-bold uppercase tracking-widest italic">Ndaipóri mba'eve gueteri</p>
-                </div>
-              ) : (
-                history.map((item) => (
-                  <div key={item.id} className="bg-slate-50 p-5 rounded-2xl border border-slate-100 hover:border-indigo-200 transition-all group relative">
-                    <div className="flex justify-between items-start mb-3">
-                      <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">
-                        {item.createdAt?.toDate().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </span>
-                      <button 
-                        onClick={() => deleteItem(item.id)} 
-                        className="text-slate-300 hover:text-red-500 p-1 rounded-md transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                    <div id="panel-result" class="hidden animate-in fade-in slide-in-from-bottom-2">
+                        <div class="flex justify-between items-start mb-6">
+                            <div class="space-y-1">
+                                <span id="res-sku" class="text-[9px] bg-black text-white px-2 py-0.5 font-mono font-bold">SKU-000</span>
+                                <h2 id="res-name" class="text-3xl font-black tracking-tighter uppercase leading-none pt-2">PRODUCTO</h2>
+                            </div>
+                            <img id="res-img" class="w-20 h-20 object-cover bg-gray-50 rounded hidden">
+                        </div>
+                        <div class="grid grid-cols-2 gap-8 py-6 border-y border-gray-100 mb-6">
+                            <div>
+                                <span class="text-[8px] font-bold text-gray-400 uppercase">Precio</span>
+                                <p id="res-price" class="text-3xl font-light">$0.00</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[8px] font-bold text-gray-400 uppercase">Stock</span>
+                                <p id="res-stock" class="text-3xl font-light">0</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="openEditMode()" class="flex-1 border border-black py-4 text-[10px] font-bold uppercase">Editar</button>
+                            <button onclick="resetUI()" class="px-6 border border-gray-100 text-[10px] font-bold">X</button>
+                        </div>
                     </div>
-                    <div className="text-xs text-slate-600 line-clamp-3 font-medium leading-relaxed mb-4 italic">
-                      {item.content}
-                    </div>
-                    <button 
-                      onClick={() => copyText(item.content)}
-                      className="w-full text-[10px] font-black py-3 bg-white border border-slate-200 rounded-xl hover:bg-indigo-700 hover:text-white transition-all uppercase tracking-widest"
-                    >
-                      Ehecha Detalle
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
 
-        {error && (
-          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-red-600 text-white p-5 rounded-2xl shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom-8">
-            <AlertCircle className="w-6 h-6 flex-shrink-0" />
-            <p className="font-bold text-sm">{error}</p>
-            <button onClick={() => setError(null)} className="ml-auto font-black text-xs opacity-60">X</button>
-          </div>
-        )}
-      </div>
+                    <div id="panel-form" class="hidden space-y-6">
+                        <h3 class="text-lg font-black uppercase">Ficha Técnica</h3>
+                        <input id="new-name" type="text" placeholder="Nombre Comercial" class="input-minimal font-bold">
+                        <div class="grid grid-cols-2 gap-4">
+                            <input id="new-price" type="number" step="0.01" placeholder="Precio $" class="input-minimal font-mono">
+                            <input id="new-stock" type="number" placeholder="Stock" class="input-minimal font-mono">
+                        </div>
+                        <div class="py-4 border-2 border-dashed border-gray-100 rounded text-center">
+                            <input type="file" id="image-input" class="hidden" onchange="handleImage(this)" accept="image/*" capture="environment">
+                            <button onclick="document.getElementById('image-input').click()" class="text-[9px] font-bold uppercase flex flex-col items-center gap-2">
+                                <i data-lucide="camera" class="w-6 h-6"></i> Escanear con IA
+                            </button>
+                            <div id="ai-loading" class="hidden mt-2 text-[8px] font-bold animate-pulse">Analizando Visión...</div>
+                        </div>
+                        <button onclick="saveProduct()" class="w-full btn-primary">Guardar en Cloud</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VISTA ARCHIVO -->
+            <section id="view-inventory" class="hidden h-full flex flex-col">
+                <div class="p-8 border-b">
+                    <h2 class="text-3xl font-black tracking-tighter">ARCHIVO</h2>
+                    <input type="text" id="inv-search" oninput="renderArchive()" placeholder="Buscar..." class="input-minimal mt-4">
+                </div>
+                <div id="inv-list" class="flex-1 overflow-y-auto px-8 divide-y divide-gray-50 pb-20"></div>
+            </section>
+        </main>
+
+        <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-black text-white px-8 py-4 text-[9px] font-bold uppercase tracking-widest opacity-0 transition-all pointer-events-none z-50">Toast</div>
     </div>
-  );
-};
 
-export default App;
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'kindo-inventory';
+        const apiKey = ""; 
+
+        let user = null;
+        let inventory = [];
+        let scanner = null;
+        let activeCode = null;
+        let activeImg = null;
+
+        onAuthStateChanged(auth, u => {
+            user = u;
+            if (u) {
+                document.getElementById('sync-status').className = 'w-1.5 h-1.5 rounded-full bg-green-500';
+                subscribe();
+            }
+        });
+
+        async function init() {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+            lucide.createIcons();
+        }
+
+        function subscribe() {
+            const q = collection(db, 'artifacts', appId, 'public', 'data', 'inventory');
+            onSnapshot(q, snap => {
+                inventory = snap.docs.map(d => ({...d.data(), id: d.id}));
+                renderArchive();
+            });
+        }
+
+        window.startScanner = async () => {
+            scanner = new Html5Qrcode("reader");
+            await scanner.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, (code) => {
+                if (code !== activeCode) {
+                    if (navigator.vibrate) navigator.vibrate(50);
+                    processCode(code);
+                }
+            });
+            document.getElementById('cam-placeholder').classList.add('hidden');
+        };
+
+        window.processCode = (code) => {
+            activeCode = code.toUpperCase();
+            const p = inventory.find(x => x.sku === activeCode);
+            hidePanels();
+            if (p) showResult(p);
+            else showForm(activeCode);
+        };
+
+        function showResult(p) {
+            document.getElementById('panel-result').classList.remove('hidden');
+            document.getElementById('res-name').innerText = p.name;
+            document.getElementById('res-sku').innerText = p.sku;
+            document.getElementById('res-price').innerText = `$${p.price}`;
+            document.getElementById('res-stock').innerText = p.stock;
+            if (p.image) {
+                const img = document.getElementById('res-img');
+                img.src = p.image;
+                img.classList.remove('hidden');
+            }
+        }
+
+        function showForm(code) {
+            document.getElementById('panel-form').classList.remove('hidden');
+            activeCode = code;
+        }
+
+        window.handleImage = (input) => {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                activeImg = e.target.result;
+                const base64 = activeImg.split(',')[1];
+                await analyzeIA(base64);
+            };
+            reader.readAsDataURL(file);
+        };
+
+        async function analyzeIA(base64) {
+            const loader = document.getElementById('ai-loading');
+            loader.classList.remove('hidden');
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        contents: [{ parts: [
+                            { text: "Analiza la etiqueta. Devuelve solo un JSON: {\"name\": string, \"price\": number}" },
+                            { inlineData: { mimeType: "image/png", data: base64 } }
+                        ]}],
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                });
+                const data = await res.json();
+                const clean = JSON.parse(data.candidates[0].content.parts[0].text);
+                if (clean.name) document.getElementById('new-name').value = clean.name;
+                if (clean.price) document.getElementById('new-price').value = clean.price;
+                toast("IA: Datos extraídos");
+            } catch (e) {
+                toast("Error en IA");
+            } finally { loader.classList.add('hidden'); }
+        }
+
+        window.saveProduct = async () => {
+            const name = document.getElementById('new-name').value;
+            const price = parseFloat(document.getElementById('new-price').value);
+            const stock = parseInt(document.getElementById('new-stock').value) || 0;
+            if (!name || isNaN(price)) return toast("Faltan datos");
+            
+            const sku = activeCode || "SKU-" + Math.random().toString(36).substr(2,6).toUpperCase();
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'inventory', sku), {
+                sku, name, price, stock, image: activeImg, updatedAt: new Date().toISOString()
+            }, { merge: true });
+            toast("Sincronizado");
+            resetUI();
+        };
+
+        window.toggleView = () => {
+            const scan = document.getElementById('view-scanner');
+            const inv = document.getElementById('view-inventory');
+            const isScan = !scan.classList.contains('hidden');
+            scan.classList.toggle('hidden', isScan);
+            inv.classList.toggle('hidden', !isScan);
+            document.getElementById('nav-label').innerText = isScan ? "Scanner" : "Archivo";
+            lucide.createIcons();
+        };
+
+        window.renderArchive = () => {
+            const search = document.getElementById('inv-search').value.toLowerCase();
+            const list = document.getElementById('inv-list');
+            const items = inventory.filter(i => i.name.toLowerCase().includes(search) || i.sku.toLowerCase().includes(search));
+            list.innerHTML = items.map(i => `
+                <div onclick="processCode('${i.sku}')" class="py-6 flex justify-between items-center active:bg-gray-50">
+                    <div>
+                        <span class="text-[8px] font-bold bg-black text-white px-1 font-mono">${i.sku}</span>
+                        <h4 class="font-bold uppercase tracking-tight text-sm">${i.name}</h4>
+                        <p class="text-[10px] text-gray-400">Stock: ${i.stock}</p>
+                    </div>
+                    <p class="font-black text-sm">$${i.price}</p>
+                </div>
+            `).join('');
+        };
+
+        function hidePanels() {
+            ['panel-default', 'panel-result', 'panel-form'].forEach(id => document.getElementById(id).classList.add('hidden'));
+        }
+
+        window.resetUI = () => {
+            activeCode = null; activeImg = null;
+            hidePanels();
+            document.getElementById('panel-default').classList.remove('hidden');
+            ['manual-input', 'new-name', 'new-price', 'new-stock'].forEach(id => document.getElementById(id).value = '');
+        };
+
+        function toast(m) {
+            const t = document.getElementById('toast');
+            t.innerText = m; t.style.opacity = "1";
+            setTimeout(() => t.style.opacity = "0", 2500);
+        }
+
+        init();
+    </script>
+</body>
+</html>
