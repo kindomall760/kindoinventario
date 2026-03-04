@@ -4,14 +4,14 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 
-// Configuración de Firebase
+// Firebase Configuration
 const firebaseConfig = JSON.parse(__firebase_config);
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'scanner-tickets-pro';
 
-const API_KEY = ""; // El entorno proporciona la clave automáticamente
+const API_KEY = ""; // Environment provides this key
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -25,7 +25,7 @@ const App = () => {
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef(null);
 
-  // 1. Manejo de Autenticación (Regla 3)
+  // Authentication Setup (Rule 3)
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -43,13 +43,14 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
-  // 2. Escuchar Historial (Regla 1 y 2)
+  // History Listener (Rules 1 & 2)
   useEffect(() => {
     if (!user) return;
 
     const historyRef = collection(db, 'artifacts', appId, 'users', user.uid, 'scans');
     const unsubscribe = onSnapshot(historyRef, (snapshot) => {
       const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Sort in memory to avoid index requirements
       setHistory(docs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
     }, (err) => {
       console.error("Firestore Error:", err);
@@ -122,7 +123,7 @@ const App = () => {
       setResult(null);
       setImage(null);
     } catch (err) {
-      setError("Error al guardar.");
+      setError("Error al guardar en el historial.");
     } finally {
       setSaving(false);
     }
@@ -132,7 +133,7 @@ const App = () => {
     try {
       await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'scans', id));
     } catch (err) {
-      setError("No se pudo borrar.");
+      setError("No se pudo eliminar el registro.");
     }
   };
 
@@ -148,112 +149,133 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
+      <div className="max-w-6xl mx-auto">
         <header className="text-center mb-10">
-          <div className="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <div className="bg-indigo-600 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl">
             <FileText className="text-white w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-black text-gray-800 tracking-tight">ESCÁNER DE TICKETS</h1>
-          <p className="text-gray-500">Organiza tus gastos con Inteligencia Artificial</p>
+          <h1 className="text-4xl font-black text-slate-800 tracking-tight">TICKET SCANNER PRO</h1>
+          <p className="text-slate-500 font-medium">Reconocimiento y Guardado de Gastos con IA</p>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Panel Izquierdo: Escaneo */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          {/* Main Scan Panel */}
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200">
+            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
               <div 
-                className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors ${image ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-400'}`}
+                className={`border-4 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all duration-300 ${
+                  image ? 'border-indigo-400 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-400 bg-slate-50'
+                }`}
                 onClick={() => fileInputRef.current.click()}
               >
                 {image ? (
-                  <img src={image} className="max-h-64 mx-auto rounded-lg shadow-md" alt="Ticket" />
+                  <div className="relative group">
+                    <img src={image} className="max-h-80 mx-auto rounded-xl shadow-lg border-4 border-white" alt="Ticket Preview" />
+                    <div className="mt-4 flex items-center justify-center gap-2 text-indigo-600 font-bold text-sm uppercase">
+                      <RefreshCw className="w-4 h-4" /> Cambiar Imagen
+                    </div>
+                  </div>
                 ) : (
-                  <div className="py-10">
-                    <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                    <p className="font-bold text-gray-600">Subir foto del Ticket</p>
+                  <div className="py-12">
+                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+                      <Camera className="w-10 h-10 text-indigo-400" />
+                    </div>
+                    <p className="font-black text-slate-700 text-xl tracking-tight uppercase">Subir Ticket</p>
+                    <p className="text-slate-400 text-sm mt-2 font-medium">Haz clic para seleccionar o tomar foto</p>
                   </div>
                 )}
                 <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*" />
               </div>
 
               {image && (
-                <div className="mt-4 flex gap-2">
+                <div className="mt-6 flex gap-3">
                   <button 
-                    onClick={analyzeImage} 
+                    onClick={(e) => { e.stopPropagation(); analyzeImage(); }} 
                     disabled={loading}
-                    className="flex-1 bg-blue-600 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 disabled:bg-gray-300"
+                    className="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 disabled:bg-slate-300 shadow-lg transition-transform active:scale-95"
                   >
-                    {loading ? <Loader2 className="animate-spin w-5 h-5" /> : <Search className="w-5 h-5" />}
-                    {loading ? "Analizando..." : "Analizar Ticket"}
+                    {loading ? <Loader2 className="animate-spin w-6 h-6" /> : <Search className="w-6 h-6" />}
+                    {loading ? "PROCESANDO..." : "ANALIZAR GASTO"}
                   </button>
                   <button 
-                    onClick={() => {setImage(null); setResult(null);}}
-                    className="px-6 bg-gray-100 text-gray-600 font-bold rounded-xl"
+                    onClick={(e) => { e.stopPropagation(); setImage(null); setResult(null); }}
+                    className="flex-1 bg-slate-100 text-slate-600 font-bold py-5 rounded-2xl hover:bg-slate-200 transition-colors"
                   >
-                    Limpiar
+                    CANCELAR
                   </button>
                 </div>
               )}
             </div>
 
             {result && (
-              <div className="bg-white rounded-3xl shadow-xl border-t-4 border-blue-600 overflow-hidden">
-                <div className="p-6 border-b flex justify-between items-center bg-gray-50">
-                  <h3 className="font-bold text-gray-800">Resultado</h3>
+              <div className="bg-white rounded-[2rem] shadow-2xl border border-indigo-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+                <div className="bg-indigo-600 p-6 flex justify-between items-center text-white">
+                  <h3 className="font-black tracking-tight text-lg">DATOS EXTRAÍDOS</h3>
                   <div className="flex gap-2">
-                    <button onClick={() => copyText(result)} className="p-2 hover:bg-gray-200 rounded-lg">
-                      {copied ? <CheckCircle2 className="text-green-500 w-5 h-5" /> : <Copy className="w-5 h-5 text-gray-500" />}
+                    <button 
+                      onClick={() => copyText(result)} 
+                      className="p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
+                      title="Copiar Texto"
+                    >
+                      {copied ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" />}
                     </button>
                     <button 
                       onClick={saveToHistory}
                       disabled={saving}
-                      className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2"
+                      className="bg-emerald-500 hover:bg-emerald-600 px-6 py-2 rounded-xl text-xs font-black flex items-center gap-2 shadow-lg disabled:opacity-50"
                     >
-                      <Save className="w-4 h-4" /> {saving ? 'Guardando...' : 'Guardar'}
+                      <Save className="w-4 h-4" /> {saving ? 'GUARDANDO...' : 'GUARDAR'}
                     </button>
                   </div>
                 </div>
-                <div className="p-6 text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
+                <div className="p-8 text-slate-700 whitespace-pre-wrap text-sm leading-relaxed font-medium">
                   {result}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Panel Derecho: Historial */}
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-200 flex flex-col h-[calc(100vh-200px)]">
-            <div className="p-6 border-b flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <History className="text-blue-600 w-5 h-5" />
-                <h3 className="font-bold text-gray-800 uppercase tracking-wider">Historial</h3>
+          {/* History Panel */}
+          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 flex flex-col h-[calc(100vh-160px)]">
+            <div className="p-7 border-b flex justify-between items-center bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="bg-indigo-100 p-2 rounded-lg">
+                  <History className="text-indigo-600 w-5 h-5" />
+                </div>
+                <h3 className="font-black text-slate-800 tracking-tight uppercase">Historial de Gastos</h3>
               </div>
-              <span className="text-xs font-bold bg-blue-100 text-blue-600 px-2 py-1 rounded-md">{history.length}</span>
+              <span className="text-xs font-black bg-indigo-600 text-white px-3 py-1 rounded-full">{history.length}</span>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar">
               {history.length === 0 ? (
-                <div className="text-center py-20 text-gray-400">
-                  <FileText className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                  <p className="text-sm">No hay tickets guardados</p>
+                <div className="text-center py-32 text-slate-300">
+                  <FileText className="w-16 h-16 mx-auto mb-4 opacity-10" />
+                  <p className="text-sm font-bold uppercase tracking-widest">Sin registros aún</p>
                 </div>
               ) : (
                 history.map((item) => (
-                  <div key={item.id} className="bg-gray-50 p-4 rounded-2xl border border-gray-100 hover:border-blue-200 transition-all group">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-[10px] font-bold text-gray-400">
-                        {item.createdAt?.toDate().toLocaleDateString()}
+                  <div key={item.id} className="bg-slate-50 p-5 rounded-2xl border border-slate-100 hover:border-indigo-200 transition-all group relative">
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">
+                        {item.createdAt?.toDate().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </span>
-                      <button onClick={() => deleteItem(item.id)} className="text-gray-300 hover:text-red-500">
+                      <button 
+                        onClick={() => deleteItem(item.id)} 
+                        className="text-slate-300 hover:text-red-500 p-1 rounded-md transition-colors"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
-                    <p className="text-xs text-gray-600 line-clamp-3 italic mb-3">"{item.content}"</p>
+                    <div className="text-xs text-slate-600 line-clamp-4 font-medium leading-relaxed mb-4 italic">
+                      {item.content}
+                    </div>
                     <button 
                       onClick={() => copyText(item.content)}
-                      className="w-full text-[10px] font-bold py-2 bg-white border border-gray-200 rounded-lg hover:bg-blue-600 hover:text-white transition-colors uppercase"
+                      className="w-full text-[10px] font-bold py-3 bg-white border border-slate-200 rounded-xl hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-widest"
                     >
-                      Ver Detalle / Copiar
+                      Copiar Detalles
                     </button>
                   </div>
                 ))
@@ -263,9 +285,10 @@ const App = () => {
         </div>
 
         {error && (
-          <div className="fixed bottom-6 right-6 left-6 md:left-auto md:w-96 bg-red-600 text-white p-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
-            <AlertCircle className="w-6 h-6" />
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-red-600 text-white p-5 rounded-2xl shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom-8">
+            <AlertCircle className="w-6 h-6 flex-shrink-0" />
             <p className="font-bold text-sm">{error}</p>
+            <button onClick={() => setError(null)} className="ml-auto font-black text-xs opacity-60">X</button>
           </div>
         )}
       </div>
