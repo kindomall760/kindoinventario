@@ -11,7 +11,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'scanner-tickets-pro';
 
-const API_KEY = ""; // Environment provides this key
+const API_KEY = ""; // Kuatia rendague oipurúva
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -25,7 +25,7 @@ const App = () => {
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Authentication Setup (Rule 3)
+  // Authentication Setup
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -43,14 +43,13 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
-  // History Listener (Rules 1 & 2)
+  // History Listener
   useEffect(() => {
     if (!user) return;
 
     const historyRef = collection(db, 'artifacts', appId, 'users', user.uid, 'scans');
     const unsubscribe = onSnapshot(historyRef, (snapshot) => {
       const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      // Sort in memory to avoid index requirements
       setHistory(docs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
     }, (err) => {
       console.error("Firestore Error:", err);
@@ -63,7 +62,7 @@ const App = () => {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 4 * 1024 * 1024) {
-        setError("La imagen supera los 4MB.");
+        setError("Ta'ãnga tuichaiterei (4MB max).");
         return;
       }
       const reader = new FileReader();
@@ -82,7 +81,7 @@ const App = () => {
     setLoading(true);
     setError(null);
 
-    const prompt = "Analiza este ticket de compra. Extrae: Nombre del comercio, Fecha, e Importe Total. Resume los artículos comprados en una lista. Responde en ESPAÑOL y usa Markdown.";
+    const prompt = "Ehecha ko kuatia repy (ticket). Emboyke: Moõpa ojejogua, Arange, ha Hepykue. Ejapo peteĩ tysyi tembi'u térã mba'e ojejogua va'ekuégui. Embohovái Karaiñe'ẽme ha eipuru Markdown.";
 
     try {
       const response = await fetch(
@@ -103,10 +102,10 @@ const App = () => {
 
       const data = await response.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error("No se pudo procesar el ticket");
+      if (!text) throw new Error("Ndaikatúi oñehesa'ỹijo ko kuatia");
       setResult(text);
     } catch (err) {
-      setError("Error al analizar el ticket. Inténtalo de nuevo.");
+      setError("Oiko peteĩ jejavy oñehesa'ỹijo jave. Ejapo jey.");
     } finally {
       setLoading(false);
     }
@@ -123,7 +122,7 @@ const App = () => {
       setResult(null);
       setImage(null);
     } catch (err) {
-      setError("Error al guardar en el historial.");
+      setError("Ndaikatúi oñeñongatu tembiasakuépe.");
     } finally {
       setSaving(false);
     }
@@ -133,7 +132,7 @@ const App = () => {
     try {
       await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'scans', id));
     } catch (err) {
-      setError("No se pudo eliminar el registro.");
+      setError("Ndaikatúi oñembogue.");
     }
   };
 
@@ -149,40 +148,40 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
+    <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans text-slate-900">
       <div className="max-w-6xl mx-auto">
         <header className="text-center mb-10">
-          <div className="bg-indigo-600 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl">
+          <div className="bg-indigo-700 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl">
             <FileText className="text-white w-8 h-8" />
           </div>
-          <h1 className="text-4xl font-black text-slate-800 tracking-tight">TICKET SCANNER PRO</h1>
-          <p className="text-slate-500 font-medium">Reconocimiento y Guardado de Gastos con IA</p>
+          <h1 className="text-4xl font-black text-slate-800 tracking-tight italic">TICKET SCANNER PRO</h1>
+          <p className="text-slate-500 font-medium tracking-wide uppercase text-xs">Hesatũ ha Ñongatu Tepykue IA ndive</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           {/* Main Scan Panel */}
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
+            <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-200">
               <div 
-                className={`border-4 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all duration-300 ${
+                className={`border-4 border-dashed rounded-3xl p-10 text-center cursor-pointer transition-all duration-300 ${
                   image ? 'border-indigo-400 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-400 bg-slate-50'
                 }`}
                 onClick={() => fileInputRef.current.click()}
               >
                 {image ? (
                   <div className="relative group">
-                    <img src={image} className="max-h-80 mx-auto rounded-xl shadow-lg border-4 border-white" alt="Ticket Preview" />
+                    <img src={image} className="max-h-80 mx-auto rounded-xl shadow-md border-4 border-white" alt="Ticket Hechaukaha" />
                     <div className="mt-4 flex items-center justify-center gap-2 text-indigo-600 font-bold text-sm uppercase">
-                      <RefreshCw className="w-4 h-4" /> Cambiar Imagen
+                      <RefreshCw className="w-4 h-4" /> Emoambue Ta'ãnga
                     </div>
                   </div>
                 ) : (
                   <div className="py-12">
-                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-                      <Camera className="w-10 h-10 text-indigo-400" />
+                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-slate-100">
+                      <Camera className="w-10 h-10 text-indigo-500" />
                     </div>
-                    <p className="font-black text-slate-700 text-xl tracking-tight uppercase">Subir Ticket</p>
-                    <p className="text-slate-400 text-sm mt-2 font-medium">Haz clic para seleccionar o tomar foto</p>
+                    <p className="font-black text-slate-700 text-xl tracking-tight uppercase">Emboguejy Kuatia</p>
+                    <p className="text-slate-400 text-sm mt-2 font-medium">Eikutu eiporavo hag̃ua térã eguenohẽ ta'ãnga</p>
                   </div>
                 )}
                 <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*" />
@@ -193,30 +192,29 @@ const App = () => {
                   <button 
                     onClick={(e) => { e.stopPropagation(); analyzeImage(); }} 
                     disabled={loading}
-                    className="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 disabled:bg-slate-300 shadow-lg transition-transform active:scale-95"
+                    className="flex-[2] bg-indigo-700 hover:bg-indigo-800 text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 disabled:bg-slate-300 shadow-lg transition-transform active:scale-95"
                   >
                     {loading ? <Loader2 className="animate-spin w-6 h-6" /> : <Search className="w-6 h-6" />}
-                    {loading ? "PROCESANDO..." : "ANALIZAR GASTO"}
+                    {loading ? "OÑEHESA'ỸIJO HINA..." : "EHECHA TEPYKUE"}
                   </button>
                   <button 
                     onClick={(e) => { e.stopPropagation(); setImage(null); setResult(null); }}
                     className="flex-1 bg-slate-100 text-slate-600 font-bold py-5 rounded-2xl hover:bg-slate-200 transition-colors"
                   >
-                    CANCELAR
+                    EMBOGUE
                   </button>
                 </div>
               )}
             </div>
 
             {result && (
-              <div className="bg-white rounded-[2rem] shadow-2xl border border-indigo-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
-                <div className="bg-indigo-600 p-6 flex justify-between items-center text-white">
-                  <h3 className="font-black tracking-tight text-lg">DATOS EXTRAÍDOS</h3>
+              <div className="bg-white rounded-[2.5rem] shadow-2xl border border-indigo-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+                <div className="bg-indigo-700 p-6 flex justify-between items-center text-white">
+                  <h3 className="font-black tracking-tight text-lg">MBA'E OJEJOHU VA'EKUE</h3>
                   <div className="flex gap-2">
                     <button 
                       onClick={() => copyText(result)} 
                       className="p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
-                      title="Copiar Texto"
                     >
                       {copied ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" />}
                     </button>
@@ -225,7 +223,7 @@ const App = () => {
                       disabled={saving}
                       className="bg-emerald-500 hover:bg-emerald-600 px-6 py-2 rounded-xl text-xs font-black flex items-center gap-2 shadow-lg disabled:opacity-50"
                     >
-                      <Save className="w-4 h-4" /> {saving ? 'GUARDANDO...' : 'GUARDAR'}
+                      <Save className="w-4 h-4" /> {saving ? 'OÑEÑONGATU HINA...' : 'EÑONGATU'}
                     </button>
                   </div>
                 </div>
@@ -237,29 +235,29 @@ const App = () => {
           </div>
 
           {/* History Panel */}
-          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 flex flex-col h-[calc(100vh-160px)]">
+          <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 flex flex-col h-[calc(100vh-180px)]">
             <div className="p-7 border-b flex justify-between items-center bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="bg-indigo-100 p-2 rounded-lg">
-                  <History className="text-indigo-600 w-5 h-5" />
+                  <History className="text-indigo-700 w-5 h-5" />
                 </div>
-                <h3 className="font-black text-slate-800 tracking-tight uppercase">Historial de Gastos</h3>
+                <h3 className="font-black text-slate-800 tracking-tight uppercase">Tembiasakue</h3>
               </div>
-              <span className="text-xs font-black bg-indigo-600 text-white px-3 py-1 rounded-full">{history.length}</span>
+              <span className="text-xs font-black bg-indigo-700 text-white px-3 py-1 rounded-full">{history.length}</span>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
               {history.length === 0 ? (
                 <div className="text-center py-32 text-slate-300">
                   <FileText className="w-16 h-16 mx-auto mb-4 opacity-10" />
-                  <p className="text-sm font-bold uppercase tracking-widest">Sin registros aún</p>
+                  <p className="text-sm font-bold uppercase tracking-widest italic">Ndaipóri mba'eve gueteri</p>
                 </div>
               ) : (
                 history.map((item) => (
                   <div key={item.id} className="bg-slate-50 p-5 rounded-2xl border border-slate-100 hover:border-indigo-200 transition-all group relative">
                     <div className="flex justify-between items-start mb-3">
-                      <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">
-                        {item.createdAt?.toDate().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">
+                        {item.createdAt?.toDate().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </span>
                       <button 
                         onClick={() => deleteItem(item.id)} 
@@ -268,14 +266,14 @@ const App = () => {
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
-                    <div className="text-xs text-slate-600 line-clamp-4 font-medium leading-relaxed mb-4 italic">
+                    <div className="text-xs text-slate-600 line-clamp-3 font-medium leading-relaxed mb-4 italic">
                       {item.content}
                     </div>
                     <button 
                       onClick={() => copyText(item.content)}
-                      className="w-full text-[10px] font-bold py-3 bg-white border border-slate-200 rounded-xl hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-widest"
+                      className="w-full text-[10px] font-black py-3 bg-white border border-slate-200 rounded-xl hover:bg-indigo-700 hover:text-white transition-all uppercase tracking-widest"
                     >
-                      Copiar Detalles
+                      Ehecha Detalle
                     </button>
                   </div>
                 ))
