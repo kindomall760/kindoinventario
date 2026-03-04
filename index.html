@@ -13,7 +13,7 @@
         .input-minimal { border-bottom: 1px solid #eee; padding: 12px 0; background: transparent; width: 100%; transition: 0.2s; }
         .input-minimal:focus { border-color: #000; outline: none; }
         .btn-primary { background: #000; color: #fff; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 16px; font-size: 10px; }
-        #reader video { object-fit: cover !important; }
+        #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
     </style>
 </head>
 <body class="antialiased overflow-hidden fixed w-full h-full">
@@ -39,8 +39,9 @@
             <section id="view-scanner" class="p-0">
                 <div class="h-64 bg-black relative flex items-center justify-center overflow-hidden">
                     <div id="reader" class="w-full h-full"></div>
-                    <div id="cam-placeholder" class="absolute z-10 text-center">
-                        <button onclick="startScanner()" class="border-2 border-white text-white px-8 py-3 text-[10px] font-bold uppercase">Activar Lente</button>
+                    <div id="cam-placeholder" class="absolute z-10 text-center w-full px-6">
+                        <button id="btn-activate-cam" onclick="startScanner()" class="border-2 border-white text-white px-8 py-3 text-[10px] font-bold uppercase hover:bg-white hover:text-black transition-colors">Activar Lente</button>
+                        <p id="cam-error" class="text-red-500 text-[10px] mt-2 font-bold uppercase hidden">Error de acceso a cámara</p>
                     </div>
                 </div>
 
@@ -153,14 +154,38 @@
         }
 
         window.startScanner = async () => {
-            scanner = new Html5Qrcode("reader");
-            await scanner.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, (code) => {
-                if (code !== activeCode) {
-                    if (navigator.vibrate) navigator.vibrate(50);
-                    processCode(code);
+            const btn = document.getElementById('btn-activate-cam');
+            const errLabel = document.getElementById('cam-error');
+            
+            btn.innerText = "Iniciando...";
+            errLabel.classList.add('hidden');
+
+            try {
+                if (scanner) {
+                    await scanner.clear();
                 }
-            });
-            document.getElementById('cam-placeholder').classList.add('hidden');
+                
+                scanner = new Html5Qrcode("reader");
+                const config = { fps: 15, qrbox: { width: 250, height: 250 } };
+                
+                await scanner.start(
+                    { facingMode: "environment" }, 
+                    config, 
+                    (code) => {
+                        if (code !== activeCode) {
+                            if (navigator.vibrate) navigator.vibrate(50);
+                            processCode(code);
+                        }
+                    }
+                );
+                
+                document.getElementById('cam-placeholder').classList.add('hidden');
+            } catch (err) {
+                console.error("Camera Error:", err);
+                btn.innerText = "Activar Lente";
+                errLabel.classList.remove('hidden');
+                toast("Error: No se pudo acceder a la cámara");
+            }
         };
 
         window.processCode = (code) => {
@@ -211,19 +236,21 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         contents: [{ parts: [
-                            { text: "Analiza la etiqueta. Devuelve solo un JSON: {\"name\": string, \"price\": number}" },
+                            { text: "Analiza la etiqueta del producto. Devuelve solo un JSON válido con esta estructura: {\"name\": string, \"price\": number}. No incluyas explicaciones." },
                             { inlineData: { mimeType: "image/png", data: base64 } }
                         ]}],
                         generationConfig: { responseMimeType: "application/json" }
                     })
                 });
                 const data = await res.json();
-                const clean = JSON.parse(data.candidates[0].content.parts[0].text);
+                const text = data.candidates[0].content.parts[0].text;
+                const clean = JSON.parse(text);
                 if (clean.name) document.getElementById('new-name').value = clean.name;
                 if (clean.price) document.getElementById('new-price').value = clean.price;
-                toast("IA: Datos extraídos");
+                toast("IA: Datos extraídos con éxito");
             } catch (e) {
-                toast("Error en IA");
+                console.error("AI Error:", e);
+                toast("Error: La IA no pudo procesar la imagen");
             } finally { loader.classList.add('hidden'); }
         }
 
@@ -231,13 +258,13 @@
             const name = document.getElementById('new-name').value;
             const price = parseFloat(document.getElementById('new-price').value);
             const stock = parseInt(document.getElementById('new-stock').value) || 0;
-            if (!name || isNaN(price)) return toast("Faltan datos");
+            if (!name || isNaN(price)) return toast("Faltan datos obligatorios");
             
             const sku = activeCode || "SKU-" + Math.random().toString(36).substr(2,6).toUpperCase();
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'inventory', sku), {
                 sku, name, price, stock, image: activeImg, updatedAt: new Date().toISOString()
             }, { merge: true });
-            toast("Sincronizado");
+            toast("Producto sincronizado");
             resetUI();
         };
 
@@ -252,15 +279,20 @@
         };
 
         window.renderArchive = () => {
-            const search = document.getElementById('inv-search').value.toLowerCase();
+            const searchInput = document.getElementById('inv-search');
+            if (!searchInput) return;
+            const search = searchInput.value.toLowerCase();
             const list = document.getElementById('inv-list');
-            const items = inventory.filter(i => i.name.toLowerCase().includes(search) || i.sku.toLowerCase().includes(search));
+            const items = inventory.filter(i => 
+                (i.name && i.name.toLowerCase().includes(search)) || 
+                (i.sku && i.sku.toLowerCase().includes(search))
+            );
             list.innerHTML = items.map(i => `
-                <div onclick="processCode('${i.sku}')" class="py-6 flex justify-between items-center active:bg-gray-50">
+                <div onclick="processCode('${i.sku}')" class="py-6 flex justify-between items-center active:bg-gray-50 border-b border-gray-50 last:border-0 cursor-pointer">
                     <div>
                         <span class="text-[8px] font-bold bg-black text-white px-1 font-mono">${i.sku}</span>
                         <h4 class="font-bold uppercase tracking-tight text-sm">${i.name}</h4>
-                        <p class="text-[10px] text-gray-400">Stock: ${i.stock}</p>
+                        <p class="text-[10px] text-gray-400">Stock disponible: ${i.stock}</p>
                     </div>
                     <p class="font-black text-sm">$${i.price}</p>
                 </div>
@@ -268,20 +300,29 @@
         };
 
         function hidePanels() {
-            ['panel-default', 'panel-result', 'panel-form'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            ['panel-default', 'panel-result', 'panel-form'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
+            });
         }
 
         window.resetUI = () => {
             activeCode = null; activeImg = null;
             hidePanels();
             document.getElementById('panel-default').classList.remove('hidden');
-            ['manual-input', 'new-name', 'new-price', 'new-stock'].forEach(id => document.getElementById(id).value = '');
+            ['manual-input', 'new-name', 'new-price', 'new-stock'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
         };
 
         function toast(m) {
             const t = document.getElementById('toast');
-            t.innerText = m; t.style.opacity = "1";
-            setTimeout(() => t.style.opacity = "0", 2500);
+            t.innerText = m; t.style.opacity = "1"; t.style.pointerEvents = "auto";
+            setTimeout(() => {
+                t.style.opacity = "0";
+                t.style.pointerEvents = "none";
+            }, 2500);
         }
 
         init();
