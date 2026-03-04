@@ -12,7 +12,6 @@ const App = () => {
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Manejar subida de archivos y conversión a Base64
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -36,7 +35,6 @@ const App = () => {
     }
   };
 
-  // Analizar imagen con Gemini (Visión + Texto)
   const analyzeImage = async () => {
     if (!base64Image) {
       setError("Por favor, selecciona una imagen primero.");
@@ -49,31 +47,22 @@ const App = () => {
 
     const prompt = `Actúa como un sistema OCR avanzado y analizador de documentos.
     Analiza la imagen adjunta y realiza lo siguiente:
-    1. EXTRAE TODO EL TEXTO: Identifica y transcribe cada palabra visible en la imagen manteniendo el orden lógico.
-    2. CÓDIGOS: Si detectas códigos QR o de barras, identifica su tipo y decodifica su contenido.
-    3. CLASIFICACIÓN: Identifica qué tipo de documento es (recibo, DNI, etiqueta, carta, etc.).
-    4. RESUMEN: Proporciona los puntos clave o datos más importantes extraídos.
-    
-    Responde en ESPAÑOL con una estructura clara usando Markdown.`;
+    1. EXTRAE TODO EL TEXTO: Transcribe cada palabra visible manteniendo el orden lógico.
+    2. CÓDIGOS: Identifica y decodifica códigos QR o de barras.
+    3. CLASIFICACIÓN: Identifica el tipo de documento.
+    4. RESUMEN: Proporciona los puntos clave.
+    Responde en ESPAÑOL con formato Markdown claro.`;
 
     const payload = {
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                mimeType: "image/png",
-                data: base64Image
-              }
-            }
-          ]
-        }
-      ]
+      contents: [{
+        role: "user",
+        parts: [
+          { text: prompt },
+          { inlineData: { mimeType: "image/png", data: base64Image } }
+        ]
+      }]
     };
 
-    // Lógica de reintento con backoff exponencial
     const fetchWithRetry = async (retries = 5, delay = 1000) => {
       try {
         const response = await fetch(
@@ -106,7 +95,6 @@ const App = () => {
       if (!textResult) throw new Error("La IA no devolvió resultados.");
       setResult(textResult);
     } catch (err) {
-      console.error(err);
       setError(`Error: ${err.message}. Intenta de nuevo.`);
     } finally {
       setLoading(false);
@@ -139,11 +127,11 @@ const App = () => {
             <Search className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Smart Scan AI Pro</h1>
-          <p className="text-slate-500 mt-2 text-sm md:text-base">Análisis completo de texto y códigos con IA</p>
+          <p className="text-slate-500 mt-2">Análisis completo de texto y códigos con IA</p>
         </header>
 
         {/* Sección de Carga */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 p-6 mb-8">
+        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-6 mb-8">
           <div 
             className={`relative flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 transition-all duration-300 cursor-pointer ${
               image ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-300 hover:border-indigo-400 bg-slate-50 hover:bg-white'
@@ -187,7 +175,12 @@ const App = () => {
                 {loading ? 'Analizando...' : 'Analizar con IA'}
               </button>
               <button 
-                onClick={() => { setImage(null); setResult(null); setError(null); }}
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  setImage(null); 
+                  setResult(null); 
+                  setError(null); 
+                }}
                 className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-4 px-6 rounded-2xl transition-all"
               >
                 Limpiar
@@ -221,18 +214,18 @@ const App = () => {
               </button>
             </div>
             <div className="p-8">
-              <div className="whitespace-pre-wrap text-slate-700 leading-relaxed text-sm md:text-base">
+              <div className="whitespace-pre-wrap text-slate-700 leading-relaxed text-sm md:text-base font-sans">
                 {result}
               </div>
               
               <div className="mt-10 pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-2 text-slate-400">
                   <Barcode className="w-5 h-5" />
-                  <span className="text-xs font-medium uppercase">Potenciado por Gemini AI</span>
+                  <span className="text-xs font-medium uppercase tracking-wider">Potenciado por Gemini AI</span>
                 </div>
                 <div className="flex gap-2">
-                   <span className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-bold rounded-full border border-green-100">OCR OK</span>
-                   <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full border border-blue-100">AI READY</span>
+                   <span className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-bold rounded-full border border-green-100 uppercase">OCR OK</span>
+                   <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full border border-blue-100 uppercase">AI READY</span>
                 </div>
               </div>
             </div>
