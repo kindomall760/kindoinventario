@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, Loader2, Search, FileText, Barcode, AlertCircle, RefreshCw } from 'lucide-react';
+import { Camera, Upload, Loader2, Search, FileText, Barcode, AlertCircle, RefreshCw, Copy, CheckCircle2 } from 'lucide-react';
 
-const API_KEY = ""; // El entorno proporciona la clave automáticamente
+const API_KEY = ""; // Environment provides this automatically
 
 const App = () => {
   const [image, setImage] = useState(null);
@@ -9,12 +9,18 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [copied, setCopied] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Función para manejar la subida de archivos y conversión a Base64
+  // Handle file upload and Base64 conversion
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (file.size > 4 * 1024 * 1024) {
+        setError("La imagen es demasiado grande. Máximo 4MB.");
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setImage(reader.result);
@@ -23,23 +29,32 @@ const App = () => {
         setResult(null);
         setError(null);
       };
+      reader.onerror = () => {
+        setError("Error al leer el archivo.");
+      };
       reader.readAsDataURL(file);
     }
   };
 
-  // Implementación de análisis con Gemini (Visión + Texto)
+  // Analyze image with Gemini (Vision + Text)
   const analyzeImage = async () => {
-    if (!base64Image) return;
+    if (!base64Image) {
+      setError("Por favor, selecciona una imagen primero.");
+      return;
+    }
     
     setLoading(true);
     setError(null);
+    setResult(null);
 
-    const prompt = `Analiza detalladamente esta imagen. 
-    1. Extrae TODO el texto que veas (OCR).
-    2. Si hay códigos de barras o QR, indica su contenido.
-    3. Clasifica el tipo de documento.
-    4. Resume la información clave.
-    Responde en español con un formato limpio y estructurado.`;
+    const prompt = `Actúa como un sistema OCR avanzado y analizador de documentos.
+    Analiza la imagen adjunta y realiza lo siguiente:
+    1. EXTRAE TODO EL TEXTO: Identifica y transcribe cada palabra visible en la imagen manteniendo el orden lógico.
+    2. CÓDIGOS: Si detectas códigos QR o de barras, identifica su tipo y decodifica su contenido.
+    3. CLASIFICACIÓN: Identifica qué tipo de documento es (recibo, DNI, etiqueta, carta, etc.).
+    4. RESUMEN: Proporciona los puntos clave o datos más importantes extraídos.
+    
+    Responde en ESPAÑOL con una estructura clara usando Markdown.`;
 
     const payload = {
       contents: [
@@ -58,7 +73,7 @@ const App = () => {
       ]
     };
 
-    // Lógica de reintento con backoff exponencial
+    // Exponential backoff retry logic
     const fetchWithRetry = async (retries = 5, delay = 1000) => {
       try {
         const response = await fetch(
@@ -70,7 +85,10 @@ const App = () => {
           }
         );
 
-        if (!response.ok) throw new Error('Error en la API');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || 'Error en la API');
+        }
         
         const data = await response.json();
         return data.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -85,11 +103,30 @@ const App = () => {
 
     try {
       const textResult = await fetchWithRetry();
+      if (!textResult) throw new Error("La IA no devolvió resultados.");
       setResult(textResult);
     } catch (err) {
-      setError("No se pudo analizar la imagen. Por favor, intenta de nuevo.");
+      console.error(err);
+      setError(`Error: ${err.message}. Intenta con otra imagen o vuelve a intentarlo.`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const copyToClipboard = () => {
+    if (result) {
+      const textArea = document.createElement("textarea");
+      textArea.value = result;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error('Fallback copy failed', err);
+      }
+      document.body.removeChild(textArea);
     }
   };
 
@@ -98,26 +135,35 @@ const App = () => {
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <header className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-indigo-600 flex items-center justify-center gap-2">
-            <Search className="w-8 h-8" /> Smart Scan AI
-          </h1>
-          <p className="text-slate-500 mt-2">Escanea códigos, extrae texto y analiza documentos con IA</p>
+          <div className="inline-flex items-center justify-center p-3 bg-indigo-600 rounded-2xl mb-4 shadow-lg shadow-indigo-200">
+            <Search className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Smart Scan AI Pro</h1>
+          <p className="text-slate-500 mt-2">Visión artificial para extraer texto, códigos y datos clave</p>
         </header>
 
         {/* Upload Section */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-          <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl p-8 hover:border-indigo-400 transition-colors cursor-pointer bg-slate-50"
-               onClick={() => fileInputRef.current.click()}>
-            
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 p-6 mb-8">
+          <div 
+            className={`relative flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 transition-all duration-300 cursor-pointer overflow-hidden ${
+              image ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-300 hover:border-indigo-400 bg-slate-50 hover:bg-white'
+            }`}
+            onClick={() => fileInputRef.current.click()}
+          >
             {image ? (
-              <img src={image} alt="Preview" className="max-h-64 rounded-lg shadow-md mb-4" />
-            ) : (
-              <div className="flex flex-col items-center">
-                <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4">
-                  <Camera className="w-8 h-8" />
+              <div className="relative w-full flex flex-col items-center">
+                <img src={image} alt="Preview" className="max-h-72 w-auto rounded-xl shadow-lg border border-white" />
+                <div className="absolute top-2 right-2 bg-white/90 backdrop-blur p-2 rounded-full shadow-sm">
+                  <RefreshCw className="w-4 h-4 text-slate-600" />
                 </div>
-                <p className="font-medium text-slate-700 text-center">Toca para subir una foto o usar la cámara</p>
-                <p className="text-xs text-slate-400 mt-1 text-center">PNG, JPG soportados</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center py-6">
+                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-md mb-4 border border-slate-100">
+                  <Camera className="w-10 h-10 text-indigo-500" />
+                </div>
+                <p className="font-semibold text-slate-700 text-lg">Subir o Tomar Foto</p>
+                <p className="text-sm text-slate-400 mt-2 text-center max-w-[200px]">Selecciona una imagen con texto o códigos para analizar</p>
               </div>
             )}
             
@@ -131,20 +177,20 @@ const App = () => {
           </div>
 
           {image && (
-            <div className="mt-6 flex gap-3">
+            <div className="mt-6 flex flex-col sm:flex-row gap-4">
               <button 
                 onClick={analyzeImage}
                 disabled={loading}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-bold py-4 px-8 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-lg shadow-indigo-100 active:scale-95"
               >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
-                {loading ? 'Analizando...' : 'Analizar con IA'}
+                {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Search className="w-6 h-6" />}
+                {loading ? 'Analizando documento...' : 'Procesar con IA'}
               </button>
               <button 
-                onClick={() => { setImage(null); setResult(null); }}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-3 px-4 rounded-xl transition-all"
+                onClick={() => { setImage(null); setResult(null); setError(null); }}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-4 px-6 rounded-2xl transition-all"
               >
-                <RefreshCw className="w-5 h-5" />
+                Limpiar
               </button>
             </div>
           )}
@@ -152,37 +198,46 @@ const App = () => {
 
         {/* Error Display */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl mb-6 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-            <p>{error}</p>
+          <div className="bg-red-50 border border-red-100 text-red-600 p-5 rounded-2xl mb-8 flex items-start gap-4 animate-in fade-in zoom-in duration-300">
+            <AlertCircle className="w-6 h-6 flex-shrink-0" />
+            <p className="font-medium">{error}</p>
           </div>
         )}
 
         {/* Results Section */}
         {result && (
-          <div className="bg-white rounded-2xl shadow-lg border border-indigo-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-indigo-600 p-4 flex items-center gap-3 text-white font-semibold text-lg">
-              <FileText className="w-6 h-6" />
-              Resultado del Análisis
+          <div className="bg-white rounded-3xl shadow-xl border border-indigo-50 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <div className="bg-indigo-600 p-5 flex items-center justify-between text-white">
+              <div className="flex items-center gap-3">
+                <FileText className="w-6 h-6" />
+                <h3 className="font-bold text-lg">Resultado de Inteligencia Artificial</h3>
+              </div>
+              <button 
+                onClick={copyToClipboard}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors flex items-center gap-2 text-sm"
+              >
+                {copied ? <CheckCircle2 className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                {copied ? 'Copiado' : 'Copiar'}
+              </button>
             </div>
-            <div className="p-6">
-              <div className="prose prose-indigo max-w-none whitespace-pre-wrap text-slate-700 leading-relaxed">
+            <div className="p-8">
+              <div className="prose prose-slate max-w-none prose-pre:bg-slate-50 prose-pre:text-indigo-600 whitespace-pre-wrap text-slate-700 leading-relaxed text-base">
                 {result}
               </div>
               
-              <div className="mt-8 pt-6 border-t border-slate-100 flex justify-between items-center">
-                <span className="text-xs text-slate-400 flex items-center gap-1">
-                  <Barcode className="w-4 h-4" /> Escaneo procesado por Gemini 2.5 Flash
-                </span>
-                <button 
-                  onClick={() => {
-                    navigator.clipboard.writeText(result);
-                    // Podrías añadir un feedback visual aquí
-                  }}
-                  className="text-indigo-600 text-sm font-medium hover:underline"
-                >
-                  Copiar texto
-                </button>
+              <div className="mt-10 pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="flex items-center gap-2 text-slate-400">
+                  <Barcode className="w-5 h-5" />
+                  <span className="text-sm font-medium">Procesado por Gemini 2.5 Flash</span>
+                </div>
+                <div className="flex gap-2">
+                   <span className="px-3 py-1 bg-green-50 text-green-600 text-xs font-bold rounded-full border border-green-100">
+                     OCR ACTIVO
+                   </span>
+                   <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full border border-blue-100">
+                     ANÁLISIS COMPLETADO
+                   </span>
+                </div>
               </div>
             </div>
           </div>
