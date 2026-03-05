@@ -12,7 +12,7 @@
   #videoCanvas { display: none; }
   .video-container { position: relative; overflow: hidden; border-radius: 1.5rem; background: #000; aspect-ratio: 4/3; }
   video { width: 100%; height: 100%; object-fit: cover; }
-  .scan-overlay { position: absolute; inset: 0; border: 2px solid rgba(59, 130, 246, 0.5); margin: 40px; border-radius: 1rem; pointer-events: none; box-shadow: 0 0 0 1000px rgba(0,0,0,0.3); }
+  .scan-overlay { position: absolute; inset: 0; border: 2px solid rgba(59, 130, 246, 0.5); margin: 20px; border-radius: 1rem; pointer-events: none; box-shadow: 0 0 0 1000px rgba(0,0,0,0.3); }
   .usb-active { border-color: #10b981 !important; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
 </style>
 </head>
@@ -25,11 +25,11 @@
       <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-200">
         <span class="text-white font-black text-xl">K</span>
       </div>
-      <h1 class="text-xl font-black tracking-tighter uppercase italic">Kindo Mall <span class="text-blue-600">Vision v2.5</span></h1>
+      <h1 class="text-xl font-black tracking-tighter uppercase italic">Kindo Mall <span class="text-blue-600">Vision v2.6</span></h1>
     </div>
     <div id="usbStatusIndicator" class="flex items-center gap-2 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 transition-all">
         <div id="usbDot" class="w-2 h-2 rounded-full bg-slate-400"></div>
-        <span id="usbLabel" class="text-[9px] font-black text-slate-500 uppercase tracking-widest">USB Scanner Standby</span>
+        <span id="usbLabel" class="text-[9px] font-black text-slate-500 uppercase tracking-widest">USB Standby</span>
     </div>
   </div>
 </nav>
@@ -41,46 +41,46 @@
     <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-200">
       <div class="flex justify-between items-center mb-4">
           <h2 class="text-lg font-black uppercase tracking-tight">Escanear Ticket o Código</h2>
-          <button onclick="toggleCamera()" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <button id="camToggleBtn" onclick="toggleCamera()" class="p-3 bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-600 rounded-xl transition-all">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           </button>
       </div>
       
       <div class="video-container mb-6 border-2 border-transparent transition-all" id="cameraWrapper">
-        <video id="video" autoplay playsinline></video>
+        <video id="video" autoplay playsinline muted></video>
         <div class="scan-overlay"></div>
         <canvas id="videoCanvas"></canvas>
       </div>
 
       <div class="grid grid-cols-2 gap-3 mb-6">
-          <button id="btnCapture" onclick="capturarYProcesar()" class="bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 flex flex-col items-center justify-center gap-1">
-              <span class="text-xs uppercase tracking-widest text-blue-100">Cámara</span>
+          <button id="btnCapture" onclick="capturarYProcesar()" class="bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-2xl shadow-lg transition-all active:scale-95 flex flex-col items-center justify-center gap-1">
+              <span class="text-xs uppercase tracking-widest text-blue-100">Capturar</span>
               <span class="text-sm">TOMAR FOTO</span>
           </button>
-          <label class="bg-white border-2 border-slate-200 hover:border-blue-400 cursor-pointer flex flex-col items-center justify-center py-4 rounded-2xl transition-all">
+          <label class="bg-white border-2 border-slate-200 hover:border-blue-400 cursor-pointer flex flex-col items-center justify-center py-5 rounded-2xl transition-all active:bg-slate-50">
               <input type="file" id="ticketInput" accept="image/*" class="hidden">
-              <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Galería</span>
-              <span class="text-sm font-bold">SUBIR</span>
+              <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Archivos</span>
+              <span class="text-sm font-bold">GALERÍA</span>
           </label>
       </div>
 
       <div id="progressContainer" class="hidden">
-        <div class="w-full bg-slate-100 rounded-full h-2">
-          <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all" style="width: 0%"></div>
+        <div class="w-full bg-slate-100 rounded-full h-3">
+          <div id="progressBar" class="bg-blue-600 h-3 rounded-full transition-all" style="width: 0%"></div>
         </div>
-        <p id="progressText" class="text-[10px] font-bold text-slate-400 uppercase mt-2 text-center italic">Analizando imagen...</p>
+        <p id="progressText" class="text-[10px] font-bold text-slate-500 uppercase mt-3 text-center italic tracking-widest">Procesando Inteligencia Artificial...</p>
       </div>
     </div>
 
     <div class="bg-slate-900 p-6 rounded-[2.5rem] text-white">
         <div class="flex items-center gap-3 mb-3">
             <div class="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
             </div>
-            <h3 class="text-xs font-black uppercase tracking-widest">Escáner USB / Inalámbrico</h3>
+            <h3 class="text-xs font-black uppercase tracking-widest text-blue-400">Tip de Uso Móvil</h3>
         </div>
-        <p class="text-[11px] text-slate-400 leading-relaxed">
-            El sistema detecta automáticamente códigos de barras y QR. Solo apunta y dispara tu escáner USB, no necesitas tocar la pantalla.
+        <p class="text-[11px] text-slate-400 leading-relaxed italic">
+            Para mejores resultados con la cámara del celular, asegúrate de tener buena iluminación y enfocar bien el texto o el código.
         </p>
     </div>
   </div>
@@ -97,32 +97,32 @@
         <p id="statTotal" class="text-2xl font-black mt-1 text-blue-600">$0.00</p>
       </div>
       <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hidden md:block">
-        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Estado</p>
+        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Conexión</p>
         <div class="flex items-center gap-2 mt-1">
             <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span class="text-xs font-bold uppercase">Sincronizado</span>
+            <span class="text-xs font-bold uppercase">Cloud Activo</span>
         </div>
       </div>
     </div>
 
     <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
       <div class="p-6 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
-        <h2 class="text-xs font-black uppercase tracking-widest">Actividad Reciente</h2>
-        <div id="lastScanBadge" class="hidden px-3 py-1 bg-green-100 text-green-700 rounded-full text-[9px] font-black uppercase">¡Nuevo Escaneo!</div>
+        <h2 class="text-xs font-black uppercase tracking-widest">Historial de Escaneos</h2>
+        <div id="lastScanBadge" class="hidden px-3 py-1 bg-green-100 text-green-700 rounded-full text-[9px] font-black uppercase">¡Actualizado!</div>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
             <tr class="text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-              <th class="p-5">Dato / Comercio</th>
-              <th class="p-5">Tipo</th>
-              <th class="p-5 text-right">Valor/Monto</th>
+              <th class="p-5">Detalle / ID</th>
+              <th class="p-5">Categoría</th>
+              <th class="p-5 text-right">Valor</th>
             </tr>
           </thead>
           <tbody id="tableBody" class="text-sm"></tbody>
         </table>
         <div id="tableEmpty" class="p-16 text-center text-slate-300 italic text-xs uppercase tracking-widest font-bold">
-          Esperando datos del escáner...
+          No hay registros todavía
         </div>
       </div>
     </div>
@@ -155,27 +155,61 @@ onAuthStateChanged(auth, u => {
   else await signInAnonymously(auth);
 })();
 
-// CONTROL DE CÁMARA
+// CONTROL DE CÁMARA MEJORADO PARA MÓVILES
 async function toggleCamera() {
     const video = document.getElementById('video');
+    const wrapper = document.getElementById('cameraWrapper');
+
     if (cameraActive) {
-        stream.getTracks().forEach(track => track.stop());
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        video.srcObject = null;
         cameraActive = false;
+        wrapper.style.borderColor = "transparent";
     } else {
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }, 
+            // Intentar con configuración óptima para móviles (cámara trasera)
+            const constraints = { 
+                video: { 
+                    facingMode: "environment",
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }, 
                 audio: false 
-            });
+            };
+            
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = stream;
+            
+            // Forzar play para iOS
+            video.setAttribute('autoplay', '');
+            video.setAttribute('muted', '');
+            video.setAttribute('playsinline', '');
+            
+            await video.play();
             cameraActive = true;
+            wrapper.style.borderColor = "#3b82f6";
         } catch (err) {
             console.error("Error cámara:", err);
+            // Reintento con configuración básica si falla la ideal
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                await video.play();
+                cameraActive = true;
+            } catch (fallbackErr) {
+                alert("No se pudo acceder a la cámara. Por favor permite los permisos en tu navegador.");
+            }
         }
     }
 }
 window.toggleCamera = toggleCamera;
-toggleCamera();
+
+// Iniciar cámara al cargar si es posible
+window.addEventListener('load', () => {
+    setTimeout(toggleCamera, 500);
+});
 
 // PROCESAR DESDE ARCHIVO
 document.getElementById('ticketInput').onchange = (e) => {
@@ -185,14 +219,17 @@ document.getElementById('ticketInput').onchange = (e) => {
 
 // CAPTURAR DESDE VIDEO
 window.capturarYProcesar = () => {
-    if (!cameraActive) return;
+    if (!cameraActive) {
+        toggleCamera();
+        return;
+    }
     const video = document.getElementById('video');
     const canvas = document.getElementById('videoCanvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => { procesarImagen(blob); }, 'image/jpeg', 0.90);
+    canvas.toBlob((blob) => { procesarImagen(blob); }, 'image/jpeg', 0.85);
 };
 
 // MOTOR OCR (TESSERACT)
@@ -224,94 +261,76 @@ async function procesarImagen(source) {
         });
 
     } catch (err) {
-        console.error(err);
+        console.error("Error OCR:", err);
     } finally {
         progressContainer.classList.add('hidden');
     }
 }
 
 /**
- * LÓGICA MEJORADA DE ESCÁNER USB 2D / DESKTOP
- * Captura códigos de barras y QR actuando como entrada de teclado ultra rápida.
+ * LÓGICA DE ESCÁNER USB / EXTERNO
  */
 let usbBuffer = "";
 let lastKeyTime = Date.now();
 
 window.addEventListener('keydown', (e) => {
     const currentTime = Date.now();
-    
-    // Si el tiempo entre teclas es muy corto (< 40ms), es un escáner físico.
-    if (currentTime - lastKeyTime > 50) {
-        usbBuffer = ""; 
-    }
+    if (currentTime - lastKeyTime > 50) usbBuffer = ""; 
 
     if (e.key === 'Enter') {
         if (usbBuffer.length > 2) {
-            console.log("Detección USB:", usbBuffer);
             procesarEscaneoDirecto(usbBuffer);
-            
-            // Efecto visual de éxito
-            const indicator = document.getElementById('usbStatusIndicator');
-            const dot = document.getElementById('usbDot');
-            const label = document.getElementById('usbLabel');
-            
-            indicator.classList.add('usb-active');
-            dot.classList.replace('bg-slate-400', 'bg-green-500');
-            label.innerText = "¡CÓDIGO CAPTURADO!";
-            
-            setTimeout(() => {
-                indicator.classList.remove('usb-active');
-                dot.classList.replace('bg-green-500', 'bg-slate-400');
-                label.innerText = "USB Scanner Ready";
-            }, 1500);
-
+            feedbackVisualUSB();
             usbBuffer = "";
         }
-    } else {
-        if (e.key.length === 1) usbBuffer += e.key;
+    } else if (e.key.length === 1) {
+        usbBuffer += e.key;
     }
     lastKeyTime = currentTime;
 });
 
+function feedbackVisualUSB() {
+    const indicator = document.getElementById('usbStatusIndicator');
+    const dot = document.getElementById('usbDot');
+    const label = document.getElementById('usbLabel');
+    indicator.classList.add('usb-active');
+    dot.classList.replace('bg-slate-400', 'bg-green-500');
+    label.innerText = "¡CAPTURA OK!";
+    setTimeout(() => {
+        indicator.classList.remove('usb-active');
+        dot.classList.replace('bg-green-500', 'bg-slate-400');
+        label.innerText = "USB Standby";
+    }, 1200);
+}
+
 async function procesarEscaneoDirecto(texto) {
     if (!user) return;
-    
-    // Si el texto es puramente un código (sin espacios, números largos)
     const esCodigoPuro = /^[A-Z0-9\-_]{3,40}$/i.test(texto.trim());
-    
-    let data = {};
-    if (esCodigoPuro) {
-        data = {
-            establecimiento: `PRODUCTO: ${texto.trim()}`,
-            fecha: new Date().toLocaleDateString(),
-            total_final: 0,
-            sku: texto.trim(),
-            tipo: 'CODIGO_BARRAS'
-        };
-    } else {
-        data = window.estructurarTextoOCR(texto);
-    }
+    let data = esCodigoPuro ? {
+        establecimiento: `PRODUCTO: ${texto.trim()}`,
+        fecha: new Date().toLocaleDateString(),
+        total_final: 0,
+        sku: texto.trim(),
+        tipo: 'CODIGO_BARRAS'
+    } : window.estructurarTextoOCR(texto);
 
     await addDoc(TICKETS_PATH, {
         ...data,
         userId: user.uid,
-        metodo: 'USB_2D_SCANNER',
+        metodo: 'USB_SCANNER',
         procesadoEn: serverTimestamp()
     });
 }
 
-// ESTRUCTURACIÓN DE TEXTO (LÓGICA DE NEGOCIO)
+// ESTRUCTURACIÓN DE TEXTO
 window.estructurarTextoOCR = (rawText) => {
     const lineas = rawText.split("\n").map(l => l.trim()).filter(l => l.length > 1);
     let total = 0;
     let fecha = new Date().toLocaleDateString();
     
     lineas.forEach(l => {
-        // Detectar Fecha
         const fechaMatch = l.match(/\d{2}[\/\-]\d{2}[\/\-]\d{2,4}/);
         if (fechaMatch) fecha = fechaMatch[0];
-        
-        // Detectar Montos
         const montoMatch = l.match(/\d+[.,]\d{2}/);
         if (montoMatch) {
             const v = parseFloat(montoMatch[0].replace(',', '.'));
@@ -334,7 +353,11 @@ function escucharTickets() {
     const emptyMsg = document.getElementById('tableEmpty');
     const badge = document.getElementById('lastScanBadge');
     
-    if (snapshot.empty) { emptyMsg.classList.remove('hidden'); tbody.innerHTML = ""; return; }
+    if (snapshot.empty) { 
+        emptyMsg.classList.remove('hidden'); 
+        tbody.innerHTML = ""; 
+        return; 
+    }
     
     emptyMsg.classList.add('hidden');
     badge.classList.remove('hidden');
@@ -342,18 +365,16 @@ function escucharTickets() {
 
     let html = "";
     let totalG = 0;
-    
     const docs = snapshot.docs.map(d => d.data()).sort((a,b) => (b.procesadoEn?.toMillis() || 0) - (a.procesadoEn?.toMillis() || 0));
 
     docs.forEach(t => {
       totalG += (t.total_final || 0);
       const esTicket = t.tipo === 'TICKET_COMPRA';
-      
       html += `
         <tr class="border-b border-slate-50 hover:bg-slate-50 transition-all">
           <td class="p-5 font-bold text-slate-800">
-            <div class="truncate max-w-[200px]">${t.establecimiento}</div>
-            <div class="text-[8px] text-slate-400 font-black uppercase tracking-widest">${t.metodo || 'SCANNED'}</div>
+            <div class="truncate max-w-[180px]">${t.establecimiento}</div>
+            <div class="text-[8px] text-slate-400 font-black uppercase tracking-widest">${t.metodo || 'VISION'}</div>
           </td>
           <td class="p-5">
             <span class="px-2 py-1 rounded-md text-[9px] font-black uppercase ${esTicket ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'}">
