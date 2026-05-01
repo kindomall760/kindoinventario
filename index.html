@@ -2,417 +2,493 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Kindo Mall - Scanner Pro Multi-Device</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kindo Mall — Control de Personal</title>
 <style>
-  .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; display: inline-block; }
-  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-  #videoCanvas { display: none; }
-  .video-container { position: relative; overflow: hidden; border-radius: 1.5rem; background: #000; aspect-ratio: 4/3; }
-  video { width: 100%; height: 100%; object-fit: cover; background: #111; }
-  .scan-overlay { position: absolute; inset: 0; border: 2px solid rgba(59, 130, 246, 0.5); margin: 20px; border-radius: 1rem; pointer-events: none; box-shadow: 0 0 0 1000px rgba(0,0,0,0.3); }
-  .usb-active { border-color: #10b981 !important; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+:root{--green:#1D9E75;--green-dark:#0F6E56;--green-light:#E1F5EE;--green-text:#085041;--red:#E24B4A;--red-light:#FCEBEB;--red-text:#791F1F;--amber:#BA7517;--amber-light:#FAEEDA;--amber-text:#633806;--blue:#378ADD;--blue-light:#E6F1FB;--blue-text:#0C447C;--purple:#7F77DD;--purple-light:#EEEDFE;--purple-text:#3C3489;--gray-light:#F1EFE8;--bg:#F7F7F5;--bg2:#fff;--bg3:#F0EEE8;--text:#1a1a1a;--text2:#6b6b6b;--text3:#9b9b9b;--border:rgba(0,0,0,.12);--border2:rgba(0,0,0,.2);--radius:8px;--radius-lg:12px}
+body{background:var(--bg);color:var(--text);min-height:100vh}
+input,select,textarea{padding:8px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg2);font-size:13px;color:var(--text);width:100%;outline:none;transition:border-color .15s;font-family:inherit}
+input:focus,select:focus,textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+.btn{padding:8px 18px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg2);font-size:13px;cursor:pointer;color:var(--text);font-weight:400;transition:all .15s;display:inline-flex;align-items:center;gap:6px;font-family:inherit}
+.btn:hover{background:var(--bg3)}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--green);border-color:var(--green-dark);color:#fff;font-weight:500}
+.btn-primary:hover{background:var(--green-dark)}
+.btn-danger{background:var(--red);border-color:#A32D2D;color:#fff}
+.btn-danger:hover{background:#A32D2D}
+.btn-ghost{border-color:transparent;background:transparent;color:var(--text2)}
+.btn-ghost:hover{background:var(--bg3);color:var(--text)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500}
+.b-activo{background:var(--green-light);color:var(--green-text)}
+.b-inactivo{background:var(--gray-light);color:#5F5E5A}
+.b-despedido{background:var(--red-light);color:var(--red-text)}
+.b-incapacitado{background:var(--amber-light);color:var(--amber-text)}
+.b-empleado{background:var(--blue-light);color:var(--blue-text)}
+.b-supervisor{background:var(--amber-light);color:var(--amber-text)}
+.b-gerente{background:var(--purple-light);color:var(--purple-text)}
+.b-admin{background:var(--red-light);color:var(--red-text)}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:3px;flex-shrink:0}
+.dot-activo{background:var(--green)}
+.dot-inactivo{background:#888780}
+.dot-despedido{background:var(--red)}
+.dot-incapacitado{background:var(--amber)}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg)}
+label{font-size:12px;color:var(--text2);font-weight:500;display:block;margin-bottom:5px}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border-radius:var(--radius-lg);border:1px solid var(--border);width:100%;max-width:660px;display:flex;flex-direction:column;margin:auto}
+.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg2);border-radius:var(--radius-lg) var(--radius-lg) 0 0;z-index:1}
+.modal-body{padding:22px;flex:1;overflow-y:auto;max-height:70vh}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid .full{grid-column:1/-1}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;text-align:center}
+.stat-num{font-size:28px;font-weight:500;line-height:1}
+.stat-lbl{font-size:12px;color:var(--text2);margin-top:5px}
+.emp-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.emp-card:hover{border-color:var(--green);box-shadow:0 2px 12px rgba(29,158,117,.12)}
+.avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.ponche-block{background:var(--green-light);border-radius:var(--radius);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;margin:10px 0}
+.ponche-lbl{font-size:10px;color:var(--green-dark);font-weight:600;letter-spacing:.6px;text-transform:uppercase}
+.ponche-val{font-size:18px;font-weight:600;color:var(--green-text);letter-spacing:1.5px}
+.filter-chip{padding:5px 13px;border-radius:20px;font-size:12px;border:1px solid var(--border2);cursor:pointer;background:transparent;color:var(--text2);transition:all .15s;white-space:nowrap;font-family:inherit}
+.filter-chip.active{background:var(--green-light);border-color:var(--green);color:var(--green-text);font-weight:500}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:40}
+.nav-pill{padding:6px 15px;border-radius:var(--radius);border:none;background:transparent;font-size:13px;cursor:pointer;color:var(--text2);transition:all .15s;font-family:inherit;font-weight:400}
+.nav-pill.active{background:var(--bg3);color:var(--text);font-weight:500}
+.sup-group{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:16px}
+.sup-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;background:var(--bg3)}
+.sup-body{padding:8px 20px}
+.sup-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.sup-row:last-child{border-bottom:none}
+.ficha-wrap{border:2px solid var(--green);border-radius:var(--radius-lg);overflow:hidden}
+.ficha-top{background:var(--green);padding:14px 18px;display:flex;align-items:center;gap:12px}
+.ficha-body{padding:22px;background:var(--bg2)}
+.ficha-center{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:18px}
+.ficha-avatar{width:110px;height:110px;border-radius:50%;border:4px solid var(--green);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.ficha-ponche{background:var(--green-light);border-radius:var(--radius);padding:8px 22px;text-align:center}
+.ficha-table{width:100%;font-size:13px;border-collapse:collapse}
+.ficha-table td{padding:7px 0;border-bottom:1px solid var(--border);vertical-align:top}
+.ficha-table td:first-child{color:var(--text2);width:38%;padding-right:12px}
+.section-title{font-size:14px;font-weight:500;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.photo-upload-area{width:96px;height:96px;border-radius:50%;border:2px dashed var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;overflow:hidden;position:relative;transition:border-color .15s;background:var(--bg3)}
+.photo-upload-area:hover{border-color:var(--green)}
+.empty{text-align:center;padding:70px 24px;color:var(--text2)}
+.empty-icon{font-size:42px;opacity:.25;margin-bottom:12px}
+.bar-bg{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;width:80px;flex-shrink:0}
+.bar-fill{height:100%;background:var(--green);border-radius:3px}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr}.topbar{padding:0 12px}.content{padding:14px}}
 </style>
 </head>
+<body>
 
-<body class="bg-slate-50 min-h-screen text-slate-900 font-sans">
+<div id="app"></div>
 
-<nav class="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-50">
-  <div class="max-w-7xl mx-auto flex justify-between items-center">
-    <div class="flex items-center gap-2">
-      <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-200">
-        <span class="text-white font-black text-xl">K</span>
-      </div>
-      <h1 class="text-xl font-black tracking-tighter uppercase italic">Kindo Mall <span class="text-blue-600">Vision v2.7</span></h1>
+<!-- MODAL -->
+<div id="modal-layer" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span id="modal-ttl" style="font-size:15px;font-weight:500"></span>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button>
     </div>
-    <div id="usbStatusIndicator" class="flex items-center gap-2 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 transition-all">
-        <div id="usbDot" class="w-2 h-2 rounded-full bg-slate-400"></div>
-        <span id="usbLabel" class="text-[9px] font-black text-slate-500 uppercase tracking-widest">USB Standby</span>
+    <div class="modal-body" id="modal-bdy"></div>
+    <div class="modal-footer" id="modal-ftr"></div>
+  </div>
+</div>
+
+<script>
+const CRED={u:'yu',p:'6399'};
+let session=false,employees=[],view='empleados',filterRole='all',filterStatus='all',search='',editId=null,fichaId=null,photoData=null;
+const AVC=['#1D9E75','#378ADD','#7F77DD','#D85A30','#D4537E','#BA7517'];
+const avc=n=>AVC[(n||'A').charCodeAt(0)%AVC.length];
+const ini=(a,b)=>((a||'?')[0]+(b||'')[0]).toUpperCase();
+const today=()=>new Date().toISOString().split('T')[0];
+const fmtDate=d=>{if(!d)return'—';try{return new Date(d+'T12:00').toLocaleDateString('es-DO',{day:'2-digit',month:'short',year:'numeric'})}catch{return d}};
+const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function loadData(){try{const r=localStorage.getItem('kindo_v3');if(r)employees=JSON.parse(r)}catch(e){employees=[]}render()}
+function saveData(){try{localStorage.setItem('kindo_v3',JSON.stringify(employees))}catch(e){}}
+
+function render(){document.getElementById('app').innerHTML=session?appHTML():loginHTML()}
+
+/* ─── LOGIN ─── */
+function loginHTML(){return`
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)">
+  <div class="card" style="padding:40px 36px;width:340px;border-radius:16px">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="width:56px;height:56px;background:var(--green);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700;margin:0 auto 14px">KM</div>
+      <div style="font-size:19px;font-weight:600">Kindo Mall</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:3px">Sistema de Control de Personal</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:13px">
+      <div><label>Usuario</label><input id="l-u" type="text" placeholder="Ingresa tu usuario" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div><label>Contraseña</label><input id="l-p" type="password" placeholder="Ingresa tu contraseña" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div id="l-err" style="display:none;font-size:12px;color:var(--red-text);text-align:center;padding:7px;background:var(--red-light);border-radius:var(--radius)">Usuario o contraseña incorrectos.</div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px" onclick="doLogin()">Iniciar sesión</button>
+    </div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);text-align:center;font-size:11px;color:var(--text3)">Acceso exclusivo · Administrador</div>
+  </div>
+</div>`}
+
+function doLogin(){
+  const u=(document.getElementById('l-u')||{}).value?.trim();
+  const p=(document.getElementById('l-p')||{}).value;
+  if(u===CRED.u&&p===CRED.p){session=true;render()}
+  else{const el=document.getElementById('l-err');if(el)el.style.display='block'}
+}
+function doLogout(){session=false;render()}
+
+/* ─── APP SHELL ─── */
+function appHTML(){
+  return`
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div style="width:34px;height:34px;background:var(--green);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700">KM</div>
+    <div>
+      <div style="font-size:14px;font-weight:600;line-height:1.2">Kindo Mall</div>
+      <div style="font-size:11px;color:var(--text2)">Control de Personal</div>
     </div>
   </div>
-</nav>
-
-<main class="max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
-  
-  <!-- Panel de Control / Cámara -->
-  <div class="lg:col-span-5 space-y-6">
-    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-200">
-      <div class="flex justify-between items-center mb-4">
-          <h2 class="text-lg font-black uppercase tracking-tight">Escanear Ticket o Código</h2>
-          <button id="camToggleBtn" onclick="toggleCamera()" class="p-3 bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-600 rounded-xl transition-all">
-              <svg id="camIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-          </button>
-      </div>
-      
-      <div class="video-container mb-6 border-2 border-transparent transition-all" id="cameraWrapper">
-        <video id="video" autoplay playsinline muted></video>
-        <div id="cameraStatusMsg" class="absolute inset-0 flex items-center justify-center text-white text-[10px] font-bold uppercase tracking-widest text-center px-4 pointer-events-none opacity-60">
-            Iniciando cámara...
-        </div>
-        <div class="scan-overlay"></div>
-        <canvas id="videoCanvas"></canvas>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3 mb-6">
-          <button id="btnCapture" onclick="capturarYProcesar()" class="bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-2xl shadow-lg transition-all active:scale-95 flex flex-col items-center justify-center gap-1">
-              <span class="text-xs uppercase tracking-widest text-blue-100">Capturar</span>
-              <span class="text-sm">TOMAR FOTO</span>
-          </button>
-          <label class="bg-white border-2 border-slate-200 hover:border-blue-400 cursor-pointer flex flex-col items-center justify-center py-5 rounded-2xl transition-all active:bg-slate-50">
-              <input type="file" id="ticketInput" accept="image/*" class="hidden">
-              <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Archivos</span>
-              <span class="text-sm font-bold">GALERÍA</span>
-          </label>
-      </div>
-
-      <div id="progressContainer" class="hidden">
-        <div class="w-full bg-slate-100 rounded-full h-3">
-          <div id="progressBar" class="bg-blue-600 h-3 rounded-full transition-all" style="width: 0%"></div>
-        </div>
-        <p id="progressText" class="text-[10px] font-bold text-slate-500 uppercase mt-3 text-center italic tracking-widest">Procesando Inteligencia Artificial...</p>
-      </div>
-    </div>
-
-    <div class="bg-slate-900 p-6 rounded-[2.5rem] text-white">
-        <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-            </div>
-            <h3 class="text-xs font-black uppercase tracking-widest text-blue-400">Solución de Errores</h3>
-        </div>
-        <ul class="text-[10px] text-slate-400 space-y-2 italic">
-            <li>• Si la pantalla está negra, refresca la página o presiona el icono de cámara arriba.</li>
-            <li>• Asegúrate de que ninguna otra pestaña esté usando la cámara.</li>
-            <li>• En iPhone, usa Safari para mejor compatibilidad.</li>
-        </ul>
-    </div>
+  <div style="display:flex;gap:3px">
+    ${[['empleados','Personal'],['supervisores','Supervisores'],['dashboard','Resumen']].map(([k,l])=>`<button class="nav-pill${view===k?' active':''}" onclick="setView('${k}')">${l}</button>`).join('')}
   </div>
+  <button class="btn btn-ghost btn-sm" onclick="doLogout()">Cerrar sesión</button>
+</div>
+<div class="content" style="padding:20px;max-width:1200px;margin:0 auto" id="view-area">${viewHTML()}</div>`}
 
-  <!-- Dashboard -->
-  <div class="lg:col-span-7 space-y-6">
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-      <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Capturas</p>
-        <p id="statCount" class="text-2xl font-black mt-1">0</p>
-      </div>
-      <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Monto Tickets</p>
-        <p id="statTotal" class="text-2xl font-black mt-1 text-blue-600">$0.00</p>
-      </div>
-      <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hidden md:block">
-        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Conexión</p>
-        <div class="flex items-center gap-2 mt-1">
-            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span class="text-xs font-bold uppercase">Cloud Activo</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
-      <div class="p-6 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
-        <h2 class="text-xs font-black uppercase tracking-widest">Historial de Escaneos</h2>
-        <div id="lastScanBadge" class="hidden px-3 py-1 bg-green-100 text-green-700 rounded-full text-[9px] font-black uppercase">¡Actualizado!</div>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-              <th class="p-5">Detalle / ID</th>
-              <th class="p-5">Categoría</th>
-              <th class="p-5 text-right">Valor</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody" class="text-sm"></tbody>
-        </table>
-        <div id="tableEmpty" class="p-16 text-center text-slate-300 italic text-xs uppercase tracking-widest font-bold">
-          No hay registros todavía
-        </div>
-      </div>
-    </div>
-  </div>
-</main>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-const firebaseConfig = JSON.parse(__firebase_config);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'kindo-mall-vision-v1';
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const TICKETS_PATH = collection(db, 'artifacts', appId, 'public', 'data', 'tickets');
-
-let user = null;
-let cameraActive = false;
-let stream = null;
-
-// FIREBASE AUTH
-onAuthStateChanged(auth, u => {
-  user = u;
-  if (u) escucharTickets();
-});
-(async () => {
-  if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
-  else await signInAnonymously(auth);
-})();
-
-// CONTROL DE CÁMARA MEJORADO
-async function toggleCamera() {
-    const video = document.getElementById('video');
-    const wrapper = document.getElementById('cameraWrapper');
-    const statusMsg = document.getElementById('cameraStatusMsg');
-
-    if (cameraActive) {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-        }
-        video.srcObject = null;
-        cameraActive = false;
-        wrapper.style.borderColor = "transparent";
-        statusMsg.innerText = "Cámara apagada";
-        statusMsg.classList.remove('hidden');
-    } else {
-        statusMsg.innerText = "Solicitando acceso...";
-        try {
-            const constraints = { 
-                video: { 
-                    facingMode: "environment",
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                }, 
-                audio: false 
-            };
-            
-            stream = await navigator.mediaDevices.getUserMedia(constraints);
-            video.srcObject = stream;
-            
-            // Atributos críticos para iOS/Android
-            video.setAttribute('autoplay', '');
-            video.setAttribute('muted', '');
-            video.setAttribute('playsinline', '');
-            
-            // Evento para asegurar que el video realmente está corriendo
-            video.onloadedmetadata = () => {
-                video.play().then(() => {
-                    cameraActive = true;
-                    wrapper.style.borderColor = "#3b82f6";
-                    statusMsg.classList.add('hidden');
-                }).catch(e => {
-                    console.error("Play failed:", e);
-                    statusMsg.innerText = "Toca para iniciar video";
-                });
-            };
-            
-        } catch (err) {
-            console.error("Error cámara:", err);
-            statusMsg.innerText = "Error: Permiso denegado";
-            // Reintento básico
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
-                await video.play();
-                cameraActive = true;
-                statusMsg.classList.add('hidden');
-            } catch (fallbackErr) {
-                statusMsg.innerText = "Cámara bloqueada por el sistema";
-            }
-        }
-    }
-}
-window.toggleCamera = toggleCamera;
-
-// Iniciar cámara al cargar
-window.addEventListener('load', () => {
-    // Pequeño delay para asegurar que el DOM esté listo
-    setTimeout(toggleCamera, 800);
-});
-
-// PROCESAR DESDE ARCHIVO
-document.getElementById('ticketInput').onchange = (e) => {
-    const file = e.target.files[0];
-    if (file) procesarImagen(file);
-};
-
-// CAPTURAR DESDE VIDEO
-window.capturarYProcesar = () => {
-    if (!cameraActive) {
-        toggleCamera();
-        return;
-    }
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('videoCanvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => { procesarImagen(blob); }, 'image/jpeg', 0.85);
-};
-
-// MOTOR OCR (TESSERACT)
-async function procesarImagen(source) {
-    if (!user) return;
-    const progressContainer = document.getElementById('progressContainer');
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-
-    progressContainer.classList.remove('hidden');
-
-    try {
-        const { data: { text } } = await Tesseract.recognize(source, 'spa', {
-            logger: m => {
-                if (m.status === 'recognizing text') {
-                    const p = Math.round(m.progress * 100);
-                    progressBar.style.width = p + '%';
-                    progressText.innerText = `ESCANEANDO: ${p}%`;
-                }
-            }
-        });
-
-        const ticketData = window.estructurarTextoOCR(text);
-        await addDoc(TICKETS_PATH, {
-            ...ticketData,
-            userId: user.uid,
-            metodo: 'VISION_CAMERA_OCR',
-            procesadoEn: serverTimestamp()
-        });
-
-    } catch (err) {
-        console.error("Error OCR:", err);
-    } finally {
-        progressContainer.classList.add('hidden');
-    }
+function setView(v){view=v;render()}
+function updateView(){const el=document.getElementById('view-area');if(el)el.innerHTML=viewHTML()}
+function viewHTML(){
+  if(view==='empleados')return empViewHTML();
+  if(view==='supervisores')return supViewHTML();
+  return dashHTML();
 }
 
-/**
- * LÓGICA DE ESCÁNER USB / EXTERNO
- */
-let usbBuffer = "";
-let lastKeyTime = Date.now();
-
-window.addEventListener('keydown', (e) => {
-    const currentTime = Date.now();
-    if (currentTime - lastKeyTime > 50) usbBuffer = ""; 
-
-    if (e.key === 'Enter') {
-        if (usbBuffer.length > 2) {
-            procesarEscaneoDirecto(usbBuffer);
-            feedbackVisualUSB();
-            usbBuffer = "";
-        }
-    } else if (e.key.length === 1) {
-        usbBuffer += e.key;
-    }
-    lastKeyTime = currentTime;
-});
-
-function feedbackVisualUSB() {
-    const indicator = document.getElementById('usbStatusIndicator');
-    const dot = document.getElementById('usbDot');
-    const label = document.getElementById('usbLabel');
-    indicator.classList.add('usb-active');
-    dot.classList.replace('bg-slate-400', 'bg-green-500');
-    label.innerText = "¡CAPTURA OK!";
-    setTimeout(() => {
-        indicator.classList.remove('usb-active');
-        dot.classList.replace('bg-green-500', 'bg-slate-400');
-        label.innerText = "USB Standby";
-    }, 1200);
-}
-
-async function procesarEscaneoDirecto(texto) {
-    if (!user) return;
-    const esCodigoPuro = /^[A-Z0-9\-_]{3,40}$/i.test(texto.trim());
-    let data = esCodigoPuro ? {
-        establecimiento: `PRODUCTO: ${texto.trim()}`,
-        fecha: new Date().toLocaleDateString(),
-        total_final: 0,
-        sku: texto.trim(),
-        tipo: 'CODIGO_BARRAS'
-    } : window.estructurarTextoOCR(texto);
-
-    await addDoc(TICKETS_PATH, {
-        ...data,
-        userId: user.uid,
-        metodo: 'USB_SCANNER',
-        procesadoEn: serverTimestamp()
-    });
-}
-
-// ESTRUCTURACIÓN DE TEXTO
-window.estructurarTextoOCR = (rawText) => {
-    const lineas = rawText.split("\n").map(l => l.trim()).filter(l => l.length > 1);
-    let total = 0;
-    let fecha = new Date().toLocaleDateString();
-    
-    lineas.forEach(l => {
-        const fechaMatch = l.match(/\d{2}[\/\-]\d{2}[\/\-]\d{2,4}/);
-        if (fechaMatch) fecha = fechaMatch[0];
-        const montoMatch = l.match(/\d+[.,]\d{2}/);
-        if (montoMatch) {
-            const v = parseFloat(montoMatch[0].replace(',', '.'));
-            if (v > total) total = v;
-        }
-    });
-
-    return {
-        establecimiento: lineas[0] ? lineas[0].substring(0, 30) : "Escaneo Manual",
-        fecha,
-        total_final: total,
-        tipo: total > 0 ? 'TICKET_COMPRA' : 'INFO_GENERAL'
-    };
-};
-
-// DASHBOARD REALTIME
-function escucharTickets() {
-  onSnapshot(TICKETS_PATH, (snapshot) => {
-    const tbody = document.getElementById('tableBody');
-    const emptyMsg = document.getElementById('tableEmpty');
-    const badge = document.getElementById('lastScanBadge');
-    
-    if (snapshot.empty) { 
-        emptyMsg.classList.remove('hidden'); 
-        tbody.innerHTML = ""; 
-        return; 
-    }
-    
-    emptyMsg.classList.add('hidden');
-    badge.classList.remove('hidden');
-    setTimeout(() => badge.classList.add('hidden'), 3000);
-
-    let html = "";
-    let totalG = 0;
-    const docs = snapshot.docs.map(d => d.data()).sort((a,b) => (b.procesadoEn?.toMillis() || 0) - (a.procesadoEn?.toMillis() || 0));
-
-    docs.forEach(t => {
-      totalG += (t.total_final || 0);
-      const esTicket = t.tipo === 'TICKET_COMPRA';
-      html += `
-        <tr class="border-b border-slate-50 hover:bg-slate-50 transition-all">
-          <td class="p-5 font-bold text-slate-800">
-            <div class="truncate max-w-[180px]">${t.establecimiento}</div>
-            <div class="text-[8px] text-slate-400 font-black uppercase tracking-widest">${t.metodo || 'VISION'}</div>
-          </td>
-          <td class="p-5">
-            <span class="px-2 py-1 rounded-md text-[9px] font-black uppercase ${esTicket ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'}">
-                ${t.tipo || 'DATO'}
-            </span>
-          </td>
-          <td class="p-5 text-right font-black ${esTicket ? 'text-blue-600' : 'text-slate-400'}">
-            ${esTicket ? '$' + t.total_final.toFixed(2) : (t.sku || '-')}
-          </td>
-        </tr>
-      `;
-    });
-    
-    tbody.innerHTML = html;
-    document.getElementById('statCount').innerText = snapshot.size;
-    document.getElementById('statTotal').innerText = `$${totalG.toFixed(2)}`;
+/* ─── EMPLEADOS ─── */
+function empViewHTML(){
+  const roles=['all','empleado','supervisor','gerente','admin'];
+  const rLbl={all:'Todos',empleado:'Empleados',supervisor:'Supervisores',gerente:'Gerentes',admin:'Admin'};
+  const stats=['all','activo','inactivo','incapacitado','despedido'];
+  const sLbl={all:'Todos los estados',activo:'Activo',inactivo:'Inactivo',incapacitado:'Incapacitado',despedido:'Despedido'};
+  const list=employees.filter(e=>{
+    const s=search.toLowerCase();
+    const mS=!s||[e.nombre,e.apellido,e.ponche,e.cargo,e.cedula].join(' ').toLowerCase().includes(s);
+    return mS&&(filterRole==='all'||e.rol===filterRole)&&(filterStatus==='all'||e.estado===filterStatus);
   });
+  return`
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <input style="flex:1;min-width:220px" placeholder="Buscar por nombre, ponche, cédula o cargo..." oninput="search=this.value;updateView()" value="${esc(search)}">
+    <select style="width:170px" onchange="filterStatus=this.value;updateView()">
+      ${stats.map(s=>`<option value="${s}"${filterStatus===s?' selected':''}>${sLbl[s]}</option>`).join('')}
+    </select>
+    <div style="display:flex;gap:5px;flex-wrap:wrap">
+      ${roles.map(r=>`<button class="filter-chip${filterRole===r?' active':''}" onclick="filterRole='${r}';updateView()">${rLbl[r]}</button>`).join('')}
+    </div>
+    <button class="btn btn-primary" onclick="openNew()">+ Nuevo empleado</button>
+  </div>
+  <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${list.length} empleado${list.length!==1?'s':''} encontrado${list.length!==1?'s':''}</div>
+  ${list.length===0?`<div class="empty"><div class="empty-icon">&#x1F4CB;</div><div style="font-size:14px;font-weight:500">Sin resultados</div><div style="font-size:12px;margin-top:6px">Ajusta los filtros o agrega un nuevo empleado.</div></div>`:
+  `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(275px,1fr));gap:14px">${list.map(empCard).join('')}</div>`}`}
+
+function empCard(e){
+  const sup=e.supId?employees.find(x=>x.id===e.supId):null;
+  const av=e.foto?`<img src="${esc(e.foto)}" style="width:100%;height:100%;object-fit:cover">`:`<span style="font-size:15px;font-weight:600;color:#fff">${ini(e.nombre,e.apellido)}</span>`;
+  const incTag=e.estado==='incapacitado'&&e.incDias?` (${e.incDias}d)`:'';
+  return`<div class="emp-card" onclick="openFicha('${e.id}')">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+      <div class="avatar" style="width:80px;height:80px;border:3px solid ${e.foto?'var(--green)':'var(--border2)'};background:${e.foto?'transparent':avc(e.nombre)}">${av}</div>
+      <div style="text-align:center">
+        <div style="font-size:14px;font-weight:600">${esc(e.nombre)} ${esc(e.apellido)}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">${esc(e.cargo||'Sin cargo')}${e.depto?' · '+esc(e.depto):''}</div>
+      </div>
+    </div>
+    <div class="ponche-block">
+      <span class="ponche-lbl">N° Ponche</span>
+      <span class="ponche-val">${esc(e.ponche||'—')}</span>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">
+      <span class="badge b-${e.rol||'empleado'}">${e.rol||'empleado'}</span>
+      <span class="badge b-${e.estado||'activo'}"><span class="dot dot-${e.estado||'activo'}"></span>${e.estado||'activo'}${incTag}</span>
+    </div>
+    ${sup?`<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text2)">Supervisor: <strong style="font-weight:500;color:var(--text)">${esc(sup.nombre)} ${esc(sup.apellido)}</strong></div>`:''}
+  </div>`}
+
+/* ─── SUPERVISORES ─── */
+function supViewHTML(){
+  const sups=employees.filter(e=>e.rol==='supervisor'||e.rol==='gerente');
+  if(!sups.length)return`<div class="empty"><div class="empty-icon">&#x1F464;</div><div style="font-size:14px;font-weight:500">No hay supervisores</div><div style="font-size:12px;margin-top:6px">Agrega empleados con rol Supervisor o Gerente.</div></div>`;
+  return sups.map(sup=>{
+    const team=employees.filter(e=>e.supId===sup.id);
+    const av=sup.foto?`<img src="${esc(sup.foto)}" style="width:100%;height:100%;object-fit:cover">`:
+      `<span style="font-weight:600;font-size:16px;color:#fff">${ini(sup.nombre,sup.apellido)}</span>`;
+    return`<div class="sup-group">
+      <div class="sup-header">
+        <div class="avatar" style="width:64px;height:64px;border:2px solid ${sup.foto?'var(--green)':'var(--border2)'};background:${sup.foto?'transparent':avc(sup.nombre)}">${av}</div>
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:600">${esc(sup.nombre)} ${esc(sup.apellido)}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">${esc(sup.cargo||sup.rol)} · ${esc(sup.depto||'—')}</div>
+          <div style="display:inline-block;background:var(--green-light);border-radius:6px;padding:2px 10px;margin-top:5px;font-size:11px;font-weight:600;color:var(--green-text)">Ponche: ${esc(sup.ponche)}</div>
+        </div>
+        <span class="badge b-${sup.rol}">${sup.rol}</span>
+      </div>
+      <div class="sup-body">
+        <div style="font-size:12px;font-weight:500;color:var(--text2);padding:10px 0 4px">Equipo asignado · ${team.length} persona${team.length!==1?'s':''}</div>
+        ${team.length===0?`<div style="font-size:12px;color:var(--text2);padding:10px 0;font-style:italic">Sin empleados asignados.</div>`:
+        team.map(t=>{
+          const tav=t.foto?`<img src="${esc(t.foto)}" style="width:100%;height:100%;object-fit:cover">`:
+            `<span style="font-size:12px;font-weight:600;color:#fff">${ini(t.nombre,t.apellido)}</span>`;
+          const incT=t.estado==='incapacitado'&&t.incDias?` (${t.incDias}d)`:'';
+          return`<div class="sup-row">
+            <div class="avatar" style="width:34px;height:34px;background:${t.foto?'transparent':avc(t.nombre)}">${tav}</div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:500">${esc(t.nombre)} ${esc(t.apellido)}</div>
+              <div style="font-size:11px;color:var(--text2)">${esc(t.cargo||'—')} · Ponche: <strong style="color:var(--text)">${esc(t.ponche)}</strong></div>
+            </div>
+            <span class="badge b-${t.estado||'activo'}" style="margin-right:8px"><span class="dot dot-${t.estado||'activo'}"></span>${t.estado||'activo'}${incT}</span>
+            <button class="btn btn-sm" onclick="event.stopPropagation();openFicha('${t.id}')">Ver ficha</button>
+          </div>`}).join('')}
+      </div>
+    </div>`}).join('');
 }
+
+/* ─── DASHBOARD ─── */
+function dashHTML(){
+  const total=employees.length;
+  const cActivo=employees.filter(e=>e.estado==='activo'||!e.estado).length;
+  const cInac=employees.filter(e=>e.estado==='inactivo').length;
+  const cIncap=employees.filter(e=>e.estado==='incapacitado').length;
+  const cDesp=employees.filter(e=>e.estado==='despedido').length;
+  const cSup=employees.filter(e=>e.rol==='supervisor'||e.rol==='gerente').length;
+  const byD={};employees.forEach(e=>{const d=e.depto||'Sin departamento';byD[d]=(byD[d]||0)+1});
+  const byR={};employees.forEach(e=>{const r=e.rol||'empleado';byR[r]=(byR[r]||0)+1});
+  const recent=[...employees].sort((a,b)=>b.id-a.id).slice(0,6);
+  const stats=[['Total',total,'var(--green)'],['Activos',cActivo,'var(--green)'],['Inactivos',cInac,'#888780'],['Incapacitados',cIncap,'var(--amber)'],['Despedidos',cDesp,'var(--red)'],['Supervisores',cSup,'var(--purple)']];
+  return`
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px">
+    ${stats.map(([l,n,c])=>`<div class="stat-card"><div class="stat-num" style="color:${c}">${n}</div><div class="stat-lbl">${l}</div></div>`).join('')}
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card" style="padding:16px">
+      <div class="section-title">Por departamento</div>
+      ${Object.entries(byD).sort((a,b)=>b[1]-a[1]).map(([d,n])=>`
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <div style="flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d)}</div>
+          <div style="font-size:12px;font-weight:500;min-width:18px;text-align:right">${n}</div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${total?Math.round(n/total*100):0}%"></div></div>
+        </div>`).join('')||`<div style="font-size:12px;color:var(--text2);font-style:italic">Sin datos</div>`}
+    </div>
+    <div class="card" style="padding:16px">
+      <div class="section-title">Por rol</div>
+      ${Object.entries(byR).map(([r,n])=>`
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span class="badge b-${r}" style="min-width:85px;justify-content:center">${r}</span>
+          <div class="bar-bg" style="flex:1;width:auto"><div class="bar-fill" style="width:${total?Math.round(n/total*100):0}%"></div></div>
+          <div style="font-size:12px;font-weight:500;min-width:18px">${n}</div>
+        </div>`).join('')||`<div style="font-size:12px;color:var(--text2);font-style:italic">Sin datos</div>`}
+    </div>
+  </div>
+  <div class="card" style="padding:16px">
+    <div class="section-title">Empleados recientes</div>
+    ${recent.length===0?`<div style="font-size:12px;color:var(--text2);font-style:italic">Sin datos</div>`:
+    recent.map((e,i)=>{
+      const av=e.foto?`<img src="${esc(e.foto)}" style="width:100%;height:100%;object-fit:cover">`:
+        `<span style="font-size:12px;font-weight:600;color:#fff">${ini(e.nombre,e.apellido)}</span>`;
+      const incT=e.estado==='incapacitado'&&e.incDias?` (${e.incDias}d)`:'';
+      return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;${i<recent.length-1?'border-bottom:1px solid var(--border)':''}">
+        <div class="avatar" style="width:36px;height:36px;background:${e.foto?'transparent':avc(e.nombre)}">${av}</div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:500">${esc(e.nombre)} ${esc(e.apellido)}</div><div style="font-size:11px;color:var(--text2)">Ponche: ${esc(e.ponche)} · ${esc(e.cargo||'—')}</div></div>
+        <span class="badge b-${e.estado||'activo'}"><span class="dot dot-${e.estado||'activo'}"></span>${e.estado||'activo'}${incT}</span>
+        <button class="btn btn-sm" onclick="openFicha('${e.id}')">Ver ficha</button>
+      </div>`}).join('')}
+  </div>`}
+
+/* ─── FORM ─── */
+function supOptions(cur,excl){
+  return`<option value="">Sin supervisor</option>`+
+    employees.filter(e=>(e.rol==='supervisor'||e.rol==='gerente')&&e.id!==excl)
+    .map(s=>`<option value="${s.id}"${s.id===cur?' selected':''}>${esc(s.nombre)} ${esc(s.apellido)} — Ponche ${esc(s.ponche)}</option>`).join('');
+}
+
+function formHTML(e){
+  const isInc=e&&e.estado==='incapacitado';
+  const deptos=['Ventas','Caja','Almacén','Seguridad','Limpieza','Administración','Recursos Humanos','Tecnología','Mantenimiento','Otro'];
+  return`
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border)">
+    <div id="photo-wrap" class="photo-upload-area" onclick="document.getElementById('photo-inp').click()" title="Subir foto" style="width:96px;height:96px">
+      ${e&&e.foto?`<img src="${esc(e.foto)}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0">`:
+      `<div style="text-align:center"><div style="font-size:20px;opacity:.4">&#x1F4F7;</div><div style="font-size:10px;color:var(--text2);margin-top:2px">Foto</div></div>`}
+      <input type="file" id="photo-inp" accept="image/*" style="display:none" onchange="previewPhoto(event)">
+    </div>
+    <div style="flex:1">
+      <label>N° de Ponche *</label>
+      <input id="f-ponche" value="${esc(e?e.ponche||'':'')}" placeholder="Ej: P-0001" style="font-size:22px;font-weight:700;border-color:var(--green);letter-spacing:2px;color:var(--green-text)">
+    </div>
+  </div>
+  <div class="form-grid">
+    <div><label>Nombre *</label><input id="f-nombre" value="${esc(e?e.nombre||'':'')}" placeholder="Nombre"></div>
+    <div><label>Apellido *</label><input id="f-apellido" value="${esc(e?e.apellido||'':'')}" placeholder="Apellido"></div>
+    <div><label>Cédula</label><input id="f-cedula" value="${esc(e?e.cedula||'':'')}" placeholder="000-0000000-0"></div>
+    <div><label>Teléfono</label><input id="f-tel" value="${esc(e?e.tel||'':'')}" placeholder="809-000-0000"></div>
+    <div><label>Cargo / Posición</label><input id="f-cargo" value="${esc(e?e.cargo||'':'')}" placeholder="Ej: Cajero, Guardia..."></div>
+    <div><label>Departamento</label>
+      <select id="f-depto"><option value="">Seleccionar...</option>${deptos.map(d=>`<option${e&&e.depto===d?' selected':''}>${esc(d)}</option>`).join('')}</select>
+    </div>
+    <div><label>Rol</label>
+      <select id="f-rol">
+        <option value="empleado"${!e||e.rol==='empleado'?' selected':''}>Empleado</option>
+        <option value="supervisor"${e&&e.rol==='supervisor'?' selected':''}>Supervisor</option>
+        <option value="gerente"${e&&e.rol==='gerente'?' selected':''}>Gerente</option>
+        <option value="admin"${e&&e.rol==='admin'?' selected':''}>Administrador</option>
+      </select>
+    </div>
+    <div><label>Supervisor asignado</label><select id="f-sup">${supOptions(e?e.supId:null,e?e.id:null)}</select></div>
+    <div><label>Estado</label>
+      <select id="f-estado" onchange="toggleIncDias(this.value)">
+        <option value="activo"${!e||e.estado==='activo'?' selected':''}>Activo</option>
+        <option value="inactivo"${e&&e.estado==='inactivo'?' selected':''}>Inactivo</option>
+        <option value="incapacitado"${e&&e.estado==='incapacitado'?' selected':''}>Incapacitado</option>
+        <option value="despedido"${e&&e.estado==='despedido'?' selected':''}>Despedido</option>
+      </select>
+    </div>
+    <div id="inc-wrap" style="${isInc?'':'display:none'}">
+      <label>Días de incapacidad</label>
+      <input id="f-incDias" type="number" min="1" max="365" value="${e&&e.incDias||''}" placeholder="Ej: 7 días">
+    </div>
+    <div><label>Fecha de ingreso</label><input id="f-ingreso" type="date" value="${esc(e?e.ingreso||today():today())}"></div>
+    <div><label>Email</label><input id="f-email" type="email" value="${esc(e?e.email||'':'')}" placeholder="correo@ejemplo.com"></div>
+    <div class="full"><label>Dirección completa</label><input id="f-dir" value="${esc(e?e.dir||'':'')}" placeholder="Calle, sector, ciudad..."></div>
+    <div class="full"><label>Notas internas</label><textarea id="f-notas" rows="2" style="resize:none">${esc(e?e.notas||'':'')}</textarea></div>
+  </div>`}
+
+function toggleIncDias(val){const w=document.getElementById('inc-wrap');if(w)w.style.display=val==='incapacitado'?'block':'none'}
+
+function previewPhoto(ev){
+  const file=ev.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    photoData=e.target.result;
+    const w=document.getElementById('photo-wrap');
+    if(w)w.innerHTML=`<img src="${photoData}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;border-radius:50%"><input type="file" id="photo-inp" accept="image/*" style="display:none" onchange="previewPhoto(event)">`;
+  };
+  r.readAsDataURL(file);
+}
+
+/* ─── CRUD ─── */
+function openNew(){editId=null;photoData=null;showModal('Nuevo empleado',formHTML(null),[{l:'Cancelar',c:'btn',f:'closeModal()'},{l:'Guardar empleado',c:'btn btn-primary',f:'saveEmp()'}])}
+
+function openEdit(id){
+  editId=id;const e=employees.find(x=>x.id===id);if(!e)return;
+  photoData=e.foto||null;
+  showModal('Editar empleado',formHTML(e),[{l:'Cancelar',c:'btn',f:'closeModal()'},{l:'Guardar cambios',c:'btn btn-primary',f:'saveEmp()'}]);
+}
+
+function saveEmp(){
+  const ponche=(document.getElementById('f-ponche')||{}).value?.trim();
+  const nombre=(document.getElementById('f-nombre')||{}).value?.trim();
+  const apellido=(document.getElementById('f-apellido')||{}).value?.trim();
+  if(!ponche){alert('El N° de Ponche es obligatorio.');return}
+  if(!nombre){alert('El nombre es obligatorio.');return}
+  if(employees.find(e=>e.ponche===ponche&&e.id!==editId)){alert('Ya existe un empleado con ese número de Ponche.');return}
+  const estado=document.getElementById('f-estado').value;
+  const emp={
+    id:editId||Date.now().toString(),ponche,nombre,apellido,
+    cedula:document.getElementById('f-cedula').value.trim(),
+    tel:document.getElementById('f-tel').value.trim(),
+    cargo:document.getElementById('f-cargo').value.trim(),
+    depto:document.getElementById('f-depto').value,
+    rol:document.getElementById('f-rol').value,
+    supId:document.getElementById('f-sup').value||null,
+    estado,
+    incDias:estado==='incapacitado'?(parseInt(document.getElementById('f-incDias').value)||null):null,
+    ingreso:document.getElementById('f-ingreso').value,
+    email:document.getElementById('f-email').value.trim(),
+    dir:document.getElementById('f-dir').value.trim(),
+    notas:document.getElementById('f-notas').value.trim(),
+    foto:photoData||null
+  };
+  if(editId)employees=employees.map(x=>x.id===editId?emp:x);
+  else employees.push(emp);
+  saveData();closeModal();render();
+}
+
+/* ─── FICHA ─── */
+function openFicha(id){
+  fichaId=id;const e=employees.find(x=>x.id===id);if(!e)return;
+  const sup=e.supId?employees.find(x=>x.id===e.supId):null;
+  const av=e.foto?`<img src="${esc(e.foto)}" style="width:100%;height:100%;object-fit:cover">`:
+    `<span style="font-size:36px;font-weight:700;color:#fff">${ini(e.nombre,e.apellido)}</span>`;
+  const incInfo=e.estado==='incapacitado'&&e.incDias?` · ${e.incDias} día(s) de incapacidad`:'';
+  const rows=[
+    ['Cédula / ID',e.cedula||'—'],
+    ['Teléfono',e.tel||'—'],
+    ['Email',e.email||'—'],
+    ['Dirección',e.dir||'—'],
+    ['Fecha de ingreso',fmtDate(e.ingreso)],
+    ['Departamento',e.depto||'—'],
+    ['Supervisor',sup?`${esc(sup.nombre)} ${esc(sup.apellido)} — Ponche ${esc(sup.ponche)}`:'Sin supervisor asignado'],
+    ['Estado',`${e.estado||'activo'}${incInfo}`],
+  ];
+  const body=`
+  <div class="ficha-wrap">
+    <div class="ficha-top">
+      <div style="width:38px;height:38px;background:rgba(255,255,255,.22);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700">KM</div>
+      <div style="flex:1;color:#fff">
+        <div style="font-size:16px;font-weight:600">Kindo Mall</div>
+        <div style="font-size:11px;opacity:.85">Ficha Oficial de Empleado</div>
+      </div>
+      <span class="badge" style="background:rgba(255,255,255,.2);color:#fff">${e.rol||'empleado'}</span>
+    </div>
+    <div class="ficha-body">
+      <div class="ficha-center">
+        <div class="ficha-avatar" style="background:${e.foto?'transparent':avc(e.nombre)}">${av}</div>
+        <div class="ficha-ponche">
+          <div style="font-size:10px;color:var(--green-dark);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px">N° de Ponche</div>
+          <div style="font-size:28px;font-weight:700;color:var(--green-text);letter-spacing:3px">${esc(e.ponche)}</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:20px;font-weight:600">${esc(e.nombre)} ${esc(e.apellido)}</div>
+          <div style="font-size:13px;color:var(--text2);margin-top:3px">${esc(e.cargo||'Sin cargo')}${e.depto?' · '+esc(e.depto):''}</div>
+        </div>
+      </div>
+      <table class="ficha-table">
+        ${rows.map(([l,v])=>`<tr><td>${l}</td><td>${v}</td></tr>`).join('')}
+      </table>
+      ${e.notas?`<div style="margin-top:14px;padding:10px 12px;background:var(--bg3);border-radius:var(--radius);font-size:12px;color:var(--text2)"><strong style="color:var(--text);font-weight:500">Notas:</strong> ${esc(e.notas)}</div>`:''}
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+        <span class="badge b-${e.estado||'activo'}"><span class="dot dot-${e.estado||'activo'}"></span>${e.estado||'activo'}${e.incDias&&e.estado==='incapacitado'?' ('+e.incDias+' días)':''}</span>
+        <span style="font-size:11px;color:var(--text3)">Kindo Mall · Sistema de Personal</span>
+      </div>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:14px">
+    <button class="btn btn-danger btn-sm" onclick="deleteEmp('${e.id}')">Eliminar empleado</button>
+  </div>`;
+  showModal('Ficha de empleado',body,[{l:'Cerrar',c:'btn',f:'closeModal()'},{l:'Editar empleado',c:'btn btn-primary',f:`editFromFicha('${e.id}')`}]);
+}
+
+function editFromFicha(id){closeModal();setTimeout(()=>openEdit(id),80)}
+
+function deleteEmp(id){
+  if(!confirm('¿Eliminar este empleado permanentemente?'))return;
+  employees=employees.filter(e=>e.id!==id);
+  employees.forEach(e=>{if(e.supId===id)e.supId=null});
+  saveData();closeModal();render();
+}
+
+/* ─── MODAL ─── */
+function showModal(title,body,btns){
+  document.getElementById('modal-ttl').textContent=title;
+  document.getElementById('modal-bdy').innerHTML=body;
+  document.getElementById('modal-ftr').innerHTML=btns.map(b=>`<button class="${b.c}" onclick="${b.f}">${b.l}</button>`).join('');
+  document.getElementById('modal-layer').classList.add('open');
+}
+function closeModal(){document.getElementById('modal-layer').classList.remove('open')}
+document.getElementById('modal-layer').addEventListener('click',function(e){if(e.target===this)closeModal()});
+
+loadData();
 </script>
 </body>
 </html>
